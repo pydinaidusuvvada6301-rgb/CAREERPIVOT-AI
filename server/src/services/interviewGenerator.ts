@@ -21,13 +21,20 @@ export const interviewQuestionsListSchema = z.object({
 
 export async function generateInterviewQuestions(
   targetRole: string,
-  interviewType: 'technical' | 'hr',
+  interviewType: 'technical' | 'hr' | 'behavioral' | 'coding',
   difficulty: 'beginner' | 'intermediate' | 'advanced',
   questionCount: number = 5
 ): Promise<{ questions: InterviewQuestion[]; isLiveAi: boolean }> {
+  const typeDescription = {
+    technical: 'Technical Architecture & System Concepts',
+    hr: 'General HR, Cultural Alignment & Professional Background',
+    behavioral: 'Behavioral Scenarios, STAR Method, Conflict Resolution & Leadership',
+    coding: 'Data Structures, Algorithms & Practical Code Design',
+  }[interviewType] || 'Technical Engineering Concepts';
+
   const prompt = `
 Generate ${questionCount} realistic, high-quality interview questions for a candidate interviewing for: "${targetRole}".
-Interview Type: ${interviewType === 'technical' ? 'Technical Architecture, Coding & System Concepts' : 'Behavioral, Leadership & Cultural Fit (HR)'}
+Interview Type: ${typeDescription}
 Difficulty Level: ${difficulty}
 
 Rules:

@@ -234,7 +234,7 @@ class ApiClient {
   // 5. Mock Interview
   async generateInterview(payload: {
     targetRole: string;
-    interviewType: 'technical' | 'hr';
+    interviewType: 'technical' | 'hr' | 'behavioral' | 'coding';
     difficulty: 'beginner' | 'intermediate' | 'advanced';
     questionCount?: number;
   }) {
@@ -252,7 +252,7 @@ class ApiClient {
     question: string;
     userAnswer: string;
     targetRole: string;
-    interviewType: 'technical' | 'hr';
+    interviewType: 'technical' | 'hr' | 'behavioral' | 'coding';
     difficulty: 'beginner' | 'intermediate' | 'advanced';
   }) {
     return this.request<{
@@ -371,6 +371,29 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify(payload),
     });
+  }
+
+  // 10. Admin Telemetry & Metrics
+  async getAdminMetrics() {
+    return this.request<{
+      success: boolean;
+      timestamp: string;
+      server: {
+        uptimeSeconds: number;
+        nodeVersion: string;
+        platform: string;
+        memory: { heapUsedMb: number; heapTotalMb: number; rssMb: number };
+      };
+      capabilities: { geminiConfigured: boolean; supabaseConfigured: boolean };
+      moduleUsage: Record<string, number>;
+      rateLimiting: { policy: string; status: string; throttledRequestsLast24h: number };
+      recentEvents: Array<{ id: string; event: string; level: string; timestamp: string }>;
+    }>('/admin/metrics');
+  }
+
+  // 11. User Data Export (GDPR/Privacy)
+  async exportUserData() {
+    return this.request<any>('/user/export');
   }
 }
 

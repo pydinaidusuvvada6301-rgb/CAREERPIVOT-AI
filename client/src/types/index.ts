@@ -154,8 +154,12 @@ export interface JobApplication {
   jobUrl?: string;
   jobCategory: string;
   applicationDate: string;
-  status: 'Saved' | 'Applied' | 'Interview' | 'Rejected' | 'Offer';
+  status: 'Interested' | 'Applied' | 'Assessment' | 'Interview' | 'Offer' | 'Rejected' | 'Withdrawn' | 'Saved';
   notes?: string;
+  recruiterName?: string;
+  recruiterEmail?: string;
+  interviewDate?: string;
+  followUpDate?: string;
 }
 
 export interface ApplicationAnalytics {

@@ -5,7 +5,7 @@ export async function evaluateInterviewAnswer(
   question: string,
   userAnswer: string,
   targetRole: string,
-  interviewType: 'technical' | 'hr',
+  interviewType: 'technical' | 'hr' | 'behavioral' | 'coding',
   difficulty: 'beginner' | 'intermediate' | 'advanced'
 ): Promise<{ evaluation: InterviewEvaluationOutput; isLiveAi: boolean }> {
   const prompt = `

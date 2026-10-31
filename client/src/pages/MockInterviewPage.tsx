@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
   Mic,
+  MicOff,
+  Volume2,
+  VolumeX,
   Send,
   HelpCircle,
   Sparkles,
@@ -11,6 +14,15 @@ import {
   Lightbulb,
   CheckCircle2,
   ChevronRight,
+  Clock,
+  History,
+  Timer,
+  Play,
+  Pause,
+  RotateCcw,
+  Code2,
+  Users,
+  Compass,
 } from 'lucide-react';
 import { Navbar } from '../components/Navbar';
 import { Sidebar } from '../components/Sidebar';
@@ -26,11 +38,12 @@ export const MockInterviewPage: React.FC = () => {
   const location = useLocation();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'drill' | 'history'>('drill');
 
   const [targetRole, setTargetRole] = useState(
     (location.state as any)?.targetRole || profile?.targetRole || 'Full-Stack Software Engineer'
   );
-  const [interviewType, setInterviewType] = useState<'technical' | 'hr'>('technical');
+  const [interviewType, setInterviewType] = useState<'technical' | 'hr' | 'behavioral' | 'coding'>('technical');
   const [difficulty, setDifficulty] = useState<'beginner' | 'intermediate' | 'advanced'>('intermediate');
 
   const [questions, setQuestions] = useState<InterviewQuestionItem[]>([]);
@@ -38,11 +51,141 @@ export const MockInterviewPage: React.FC = () => {
   const [userAnswer, setUserAnswer] = useState('');
   const [showHints, setShowHints] = useState(false);
 
+  // Timer state
+  const [timerDuration, setTimerDuration] = useState<number>(120); // 120s default
+  const [timeLeft, setTimeLeft] = useState<number>(120);
+  const [timerRunning, setTimerRunning] = useState<boolean>(false);
+
+  // Web Speech API state
+  const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
+  const [isListening, setIsListening] = useState<boolean>(false);
+  const [speechSupported, setSpeechSupported] = useState<{ synthesis: boolean; recognition: boolean }>({
+    synthesis: false,
+    recognition: false,
+  });
+
+  const recognitionRef = useRef<any>(null);
+
   const [loadingQuestions, setLoadingQuestions] = useState(false);
   const [evaluating, setEvaluating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [evaluation, setEvaluation] = useState<InterviewEvaluation | null>(null);
   const [apiNotice, setApiNotice] = useState<string | null>(null);
+
+  // History state
+  const [history, setHistory] = useState<Array<{
+    date: string;
+    targetRole: string;
+    interviewType: string;
+    difficulty: string;
+    question: string;
+    score: number;
+    evaluation: InterviewEvaluation;
+  }>>([]);
+
+  // Check Web Speech API support
+  useEffect(() => {
+    const hasSynth = typeof window !== 'undefined' && 'speechSynthesis' in window;
+    const SpeechRecognition =
+      typeof window !== 'undefined' &&
+      ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+
+    setSpeechSupported({
+      synthesis: hasSynth,
+      recognition: Boolean(SpeechRecognition),
+    });
+
+    if (SpeechRecognition) {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+
+      recognition.onresult = (event: any) => {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript;
+        }
+        setUserAnswer((prev) => (prev ? `${prev} ${transcript}` : transcript));
+      };
+
+      recognition.onerror = (e: any) => {
+        console.warn('Speech recognition event:', e.error);
+        setIsListening(false);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      recognitionRef.current = recognition;
+    }
+
+    // Load history from localStorage
+    try {
+      const saved = localStorage.getItem('careerpivot_interview_history');
+      if (saved) setHistory(JSON.parse(saved));
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  // Timer countdown hook
+  useEffect(() => {
+    let timer: any;
+    if (timerRunning && timeLeft > 0) {
+      timer = setInterval(() => {
+        setTimeLeft((prev) => {
+          if (prev <= 1) {
+            setTimerRunning(false);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [timerRunning, timeLeft]);
+
+  // Voice synthesis: speak question
+  const toggleSpeakQuestion = () => {
+    if (!speechSupported.synthesis) return;
+
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+
+    const currentQ = questions[currentQuestionIndex];
+    if (!currentQ) return;
+
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(currentQ.question);
+    utterance.rate = 0.95;
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+
+    window.speechSynthesis.speak(utterance);
+    setIsSpeaking(true);
+  };
+
+  // Voice recognition: record answer
+  const toggleListening = () => {
+    if (!recognitionRef.current) return;
+
+    if (isListening) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+    } else {
+      try {
+        recognitionRef.current.start();
+        setIsListening(true);
+      } catch (err) {
+        console.warn('Recognition start error:', err);
+      }
+    }
+  };
 
   // Start / generate interview questions
   const handleStartInterview = async () => {
@@ -51,6 +194,13 @@ export const MockInterviewPage: React.FC = () => {
     setEvaluation(null);
     setUserAnswer('');
     setCurrentQuestionIndex(0);
+    setTimeLeft(timerDuration);
+    setTimerRunning(false);
+
+    if (speechSupported.synthesis) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+    }
 
     try {
       const res = await api.generateInterview({
@@ -62,6 +212,7 @@ export const MockInterviewPage: React.FC = () => {
 
       if (res.success && res.questions.length > 0) {
         setQuestions(res.questions);
+        setTimeLeft(timerDuration);
       }
     } catch (err: any) {
       setError(err.message || 'Failed to generate interview questions.');
@@ -81,8 +232,18 @@ export const MockInterviewPage: React.FC = () => {
     const currentQ = questions[currentQuestionIndex];
     if (!currentQ) return;
 
+    if (speechSupported.synthesis) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+    }
+    if (isListening && recognitionRef.current) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+    }
+
     setError(null);
     setEvaluating(true);
+    setTimerRunning(false);
 
     try {
       const res = await api.evaluateInterview({
@@ -96,29 +257,53 @@ export const MockInterviewPage: React.FC = () => {
       if (res.success) {
         setEvaluation(res.evaluation);
         setApiNotice(res.notice || null);
+
+        // Append to history
+        const record = {
+          date: new Date().toLocaleDateString(),
+          targetRole,
+          interviewType,
+          difficulty,
+          question: currentQ.question,
+          score: res.evaluation.score,
+          evaluation: res.evaluation,
+        };
+        const updatedHistory = [record, ...history].slice(0, 20);
+        setHistory(updatedHistory);
+        localStorage.setItem('careerpivot_interview_history', JSON.stringify(updatedHistory));
       }
     } catch (err: any) {
-      setError(err.message || 'Evaluation failed. Please try again.');
+      setError(err.message || 'Failed to evaluate answer.');
     } finally {
       setEvaluating(false);
     }
   };
 
   const handleNextQuestion = () => {
-    setEvaluation(null);
-    setUserAnswer('');
-    setShowHints(false);
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
-    } else {
-      alert('Congratulations! You have completed all questions in this interview drill.');
+      setUserAnswer('');
+      setEvaluation(null);
+      setShowHints(false);
+      setTimeLeft(timerDuration);
+      setTimerRunning(false);
+      if (speechSupported.synthesis) {
+        window.speechSynthesis.cancel();
+        setIsSpeaking(false);
+      }
     }
+  };
+
+  const formatTimer = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
   const currentQ = questions[currentQuestionIndex];
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="min-h-screen bg-cyber-bg text-cyber-text flex flex-col">
       <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
 
       <div className="flex-1 flex">
@@ -126,223 +311,359 @@ export const MockInterviewPage: React.FC = () => {
 
         <main className="flex-1 p-4 md:p-8 max-w-7xl mx-auto w-full space-y-8">
           {/* Header */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-electric-500/15">
             <div>
               <div className="flex items-center gap-2">
-                <span className="rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-bold text-rose-700 border border-rose-200">
+                <span className="rounded-full bg-rose-500/20 px-2.5 py-0.5 text-xs font-mono font-bold text-rose-400 border border-rose-500/40">
                   Module 5
                 </span>
-                <span className="text-xs text-slate-500">Fixed 100-Point Rubric Evaluation</span>
+                <span className="text-xs font-mono text-slate-400">Strict 100-Point Rubric Simulation</span>
               </div>
-              <h1 className="text-2xl font-bold text-navy-900 mt-1">AI Mock Interview Simulator</h1>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Simulate authentic technical & behavioral interview loops with structured rubric feedback.
+              <h1 className="text-2xl font-extrabold text-white mt-1">AI Mock Interview 2.0</h1>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Technical, HR, behavioral & coding simulation drills evaluated across a 5-axis hiring committee rubric.
               </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setActiveTab('drill')}
+                className={`px-4 py-2 rounded-xl text-xs font-mono font-bold transition-all ${
+                  activeTab === 'drill'
+                    ? 'bg-electric-500/20 text-electric-400 border border-electric-500/40'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Simulation Arena
+              </button>
+              <button
+                onClick={() => setActiveTab('history')}
+                className={`px-4 py-2 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 ${
+                  activeTab === 'history'
+                    ? 'bg-neon-purple/20 text-neon-purple border border-neon-purple/40'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <History className="h-3.5 w-3.5" />
+                <span>Drill History ({history.length})</span>
+              </button>
             </div>
           </div>
 
-          {apiNotice && (
-            <div className="flex items-center gap-2 rounded-xl border border-brand-200 bg-brand-50 p-3 text-xs text-brand-800">
-              <Sparkles className="h-4 w-4 text-brand-600 shrink-0" />
-              <span>{apiNotice}</span>
-            </div>
-          )}
-
           {error && <ErrorState message={error} onRetry={() => setError(null)} />}
 
-          {/* Session Setup Controls */}
-          {questions.length === 0 && !loadingQuestions && (
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs max-w-2xl mx-auto">
-              <div className="flex items-center gap-3 pb-4 border-b border-slate-100 mb-5">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-50 text-rose-600">
-                  <Mic className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-navy-900">Configure Interview Session</h3>
-                  <p className="text-xs text-slate-500">
-                    Select your target role, interview format, and difficulty level.
-                  </p>
-                </div>
+          {activeTab === 'history' ? (
+            /* History Tab */
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-bold text-white">Your Past Interview Evaluations</h3>
+                <span className="text-xs font-mono text-slate-400">{history.length} Saved Sessions</span>
               </div>
 
-              <div className="space-y-4 text-xs">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Target Job Role</label>
-                  <select
-                    value={targetRole}
-                    onChange={(e) => setTargetRole(e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs focus:border-brand-500 focus:outline-hidden"
-                  >
-                    <option value="Full-Stack Software Engineer">Full-Stack Software Engineer</option>
-                    <option value="AI / Machine Learning Engineer">AI / Machine Learning Engineer</option>
-                    <option value="Cloud DevOps Engineer">Cloud DevOps Engineer</option>
-                    <option value="Frontend Development Specialist">Frontend Development Specialist</option>
-                    <option value="Backend / Systems Engineer">Backend / Systems Engineer</option>
-                  </select>
+              {history.length === 0 ? (
+                <div className="p-8 text-center rounded-3xl cyber-card border-slate-800 text-slate-400">
+                  <Mic className="h-8 w-8 mx-auto mb-2 text-slate-600" />
+                  <p className="text-sm font-bold text-slate-300">No completed interview drills yet.</p>
+                  <p className="text-xs text-slate-500 mt-1">Start a drill in the arena to record your performance history.</p>
                 </div>
+              ) : (
+                <div className="space-y-4">
+                  {history.map((h, i) => (
+                    <div key={i} className="rounded-2xl cyber-card p-5 border-slate-800 space-y-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold uppercase bg-electric-500/20 text-electric-400 border border-electric-500/40">
+                            {h.interviewType}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold capitalize bg-slate-800 text-slate-300">
+                            {h.difficulty}
+                          </span>
+                          <span className="text-xs font-mono text-slate-400">• {h.date}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-mono text-slate-400">Score:</span>
+                          <span className={`text-lg font-black font-mono ${h.score >= 80 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                            {h.score}/100
+                          </span>
+                        </div>
+                      </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                      <p className="text-sm font-semibold text-white">"{h.question}"</p>
+
+                      <div className="pt-2 border-t border-slate-800/80 flex flex-wrap gap-2 text-[11px] font-mono">
+                        <span className="text-slate-400">Tech: {h.evaluation.breakdown.technicalCorrectness}/30</span>
+                        <span className="text-slate-400">• Problem Solving: {h.evaluation.breakdown.problemSolving}/25</span>
+                        <span className="text-slate-400">• Communication: {h.evaluation.breakdown.communication}/20</span>
+                        <span className="text-slate-400">• Examples: {h.evaluation.breakdown.practicalExamples}/15</span>
+                        <span className="text-slate-400">• Clarity: {h.evaluation.breakdown.clarityStructure}/10</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            /* Simulation Arena Tab */
+            <div className="space-y-6">
+              {/* Configuration Bar */}
+              <div className="rounded-3xl cyber-card p-6 border-electric-500/20 space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* Target Role */}
                   <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Interview Type</label>
+                    <label className="text-[11px] font-mono uppercase text-slate-400 block mb-1.5 font-bold">
+                      Target Role
+                    </label>
+                    <input
+                      type="text"
+                      value={targetRole}
+                      onChange={(e) => setTargetRole(e.target.value)}
+                      placeholder="e.g. Full-Stack Engineer"
+                      className="w-full rounded-xl bg-cyber-bg border border-slate-800 px-3.5 py-2 text-xs text-white focus:border-electric-400 focus:outline-hidden"
+                    />
+                  </div>
+
+                  {/* Interview Category */}
+                  <div>
+                    <label className="text-[11px] font-mono uppercase text-slate-400 block mb-1.5 font-bold">
+                      Category
+                    </label>
                     <select
                       value={interviewType}
                       onChange={(e) => setInterviewType(e.target.value as any)}
-                      className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs focus:border-brand-500 focus:outline-hidden"
+                      className="w-full rounded-xl bg-cyber-bg border border-slate-800 px-3.5 py-2 text-xs text-white focus:border-electric-400 focus:outline-hidden"
                     >
-                      <option value="technical">Technical & System Design</option>
-                      <option value="hr">Behavioral & Cultural (HR)</option>
+                      <option value="technical">Technical Architecture & Systems</option>
+                      <option value="behavioral">Behavioral & STAR Leadership</option>
+                      <option value="coding">Coding & Algorithm Concepts</option>
+                      <option value="hr">General HR & Culture Alignment</option>
                     </select>
                   </div>
 
+                  {/* Difficulty */}
                   <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Difficulty Level</label>
+                    <label className="text-[11px] font-mono uppercase text-slate-400 block mb-1.5 font-bold">
+                      Difficulty Level
+                    </label>
                     <select
                       value={difficulty}
                       onChange={(e) => setDifficulty(e.target.value as any)}
-                      className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs focus:border-brand-500 focus:outline-hidden"
+                      className="w-full rounded-xl bg-cyber-bg border border-slate-800 px-3.5 py-2 text-xs text-white focus:border-electric-400 focus:outline-hidden"
                     >
-                      <option value="beginner">Associate / Entry-Level</option>
+                      <option value="beginner">Junior / Entry Level</option>
                       <option value="intermediate">Mid-Level Engineer</option>
-                      <option value="advanced">Senior / Tech Lead</option>
+                      <option value="advanced">Senior / Staff Engineer</option>
+                    </select>
+                  </div>
+
+                  {/* Timer Duration */}
+                  <div>
+                    <label className="text-[11px] font-mono uppercase text-slate-400 block mb-1.5 font-bold">
+                      Answer Timer Limit
+                    </label>
+                    <select
+                      value={timerDuration}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        setTimerDuration(val);
+                        setTimeLeft(val);
+                      }}
+                      className="w-full rounded-xl bg-cyber-bg border border-slate-800 px-3.5 py-2 text-xs text-white focus:border-electric-400 focus:outline-hidden"
+                    >
+                      <option value={60}>1 Minute (Fast Fire)</option>
+                      <option value={120}>2 Minutes (Standard)</option>
+                      <option value={180}>3 Minutes (Deep Dive)</option>
+                      <option value={300}>5 Minutes (Architecture)</option>
                     </select>
                   </div>
                 </div>
 
-                {/* 100-Point Rubric Explanation */}
-                <div className="rounded-xl bg-slate-50 p-4 border border-slate-200">
-                  <span className="font-bold text-slate-800 block mb-1">
-                    Standard 100-Point Rubric Dimensions:
-                  </span>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px] text-slate-600">
-                    <div>• Technical: <strong>30 pts</strong></div>
-                    <div>• Problem-Solving: <strong>25 pts</strong></div>
-                    <div>• Communication: <strong>20 pts</strong></div>
-                    <div>• Practical Examples: <strong>15 pts</strong></div>
-                    <div>• Structure: <strong>10 pts</strong></div>
-                  </div>
+                <div className="pt-2 flex justify-end">
+                  <button
+                    onClick={handleStartInterview}
+                    disabled={loadingQuestions}
+                    className="rounded-xl bg-gradient-to-r from-rose-600 to-pink-600 px-6 py-2.5 text-xs font-bold text-white shadow-glow-sm hover:scale-105 transition-all flex items-center gap-2"
+                  >
+                    <Mic className="h-4 w-4" />
+                    <span>{questions.length > 0 ? 'Generate New 5-Question Set' : 'Generate Drill Questions'}</span>
+                  </button>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={handleStartInterview}
-                  className="w-full mt-2 rounded-xl bg-brand-600 py-3 text-xs font-bold text-white shadow-xs hover:bg-brand-700 transition-colors flex items-center justify-center gap-2"
-                >
-                  <span>Launch Interview Simulator</span>
-                  <ChevronRight className="h-4 w-4" />
-                </button>
               </div>
-            </div>
-          )}
 
-          {loadingQuestions && (
-            <LoadingState
-              message="Generating Realistic Interview Scenario..."
-              subtext="Synthesizing challenging technical questions and architectural trade-offs."
-            />
-          )}
+              {loadingQuestions && (
+                <LoadingState
+                  message="Calibrating Role-Specific Rubric Questions..."
+                  subtext="Synthesizing architecture, behavioral, and practical engineering scenarios."
+                />
+              )}
 
-          {/* Active Question & Answer Session */}
-          {questions.length > 0 && currentQ && (
-            <div className="space-y-6">
-              {/* Question Card */}
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
-                  <div className="flex items-center gap-2">
-                    <span className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-bold text-brand-700 border border-brand-200">
-                      Question {currentQuestionIndex + 1} of {questions.length}
-                    </span>
-                    <span className="text-xs text-slate-500">• {currentQ.category}</span>
+              {/* Active Question Arena */}
+              {questions.length > 0 && currentQ && (
+                <div className="rounded-3xl cyber-card p-6 md:p-8 border-electric-500/25 space-y-6">
+                  {/* Progress & Question Header */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-electric-500/20 text-electric-400 border border-electric-500/40">
+                        Question {currentQuestionIndex + 1} of {questions.length}
+                      </span>
+                      <span className="text-xs font-mono text-slate-400">• {currentQ.category}</span>
+                    </div>
+
+                    {/* Timer & Speech Controls */}
+                    <div className="flex items-center gap-3">
+                      {/* Timer Display */}
+                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-cyber-bg border border-slate-800">
+                        <Timer className={`h-4 w-4 ${timeLeft < 30 ? 'text-rose-400 animate-pulse' : 'text-slate-400'}`} />
+                        <span className={`text-xs font-mono font-bold ${timeLeft < 30 ? 'text-rose-400' : 'text-white'}`}>
+                          {formatTimer(timeLeft)}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setTimerRunning(!timerRunning)}
+                          className="text-slate-400 hover:text-white ml-1"
+                          title={timerRunning ? 'Pause timer' : 'Start timer'}
+                        >
+                          {timerRunning ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTimeLeft(timerDuration);
+                            setTimerRunning(false);
+                          }}
+                          className="text-slate-400 hover:text-white"
+                          title="Reset timer"
+                        >
+                          <RotateCcw className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+
+                      {/* Text-to-Speech (Question Voice) */}
+                      {speechSupported.synthesis && (
+                        <button
+                          onClick={toggleSpeakQuestion}
+                          className={`p-2 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 ${
+                            isSpeaking
+                              ? 'bg-electric-500/20 border-electric-400 text-electric-300 animate-pulse'
+                              : 'bg-cyber-bg border-slate-800 text-slate-300 hover:text-white hover:border-slate-700'
+                          }`}
+                          title="Read question out loud via Speech Synthesis"
+                        >
+                          {isSpeaking ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                          <span className="hidden sm:inline">{isSpeaking ? 'Stop Audio' : 'Speak Question'}</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
 
-                  <span className="text-xs font-medium text-slate-400 capitalize">
-                    {difficulty} Level
-                  </span>
-                </div>
+                  {/* Question Text */}
+                  <div className="space-y-3">
+                    <h2 className="text-lg sm:text-xl font-extrabold text-white leading-relaxed">
+                      "{currentQ.question}"
+                    </h2>
 
-                <h2 className="text-base md:text-lg font-bold text-navy-900 leading-snug">
-                  {currentQ.question}
-                </h2>
+                    {currentQ.hints && currentQ.hints.length > 0 && (
+                      <div>
+                        <button
+                          onClick={() => setShowHints(!showHints)}
+                          className="text-xs font-mono text-electric-400 hover:text-electric-300 flex items-center gap-1"
+                        >
+                          <Lightbulb className="h-3.5 w-3.5" />
+                          <span>{showHints ? 'Hide Rubric Guidance Hints' : 'Show Rubric Guidance Hints'}</span>
+                        </button>
 
-                {/* Hint Toggle */}
-                {currentQ.hints.length > 0 && (
-                  <div className="mt-4 pt-3 border-t border-slate-100">
-                    <button
-                      onClick={() => setShowHints(!showHints)}
-                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-600 hover:text-brand-700"
-                    >
-                      <Lightbulb className="h-3.5 w-3.5" />
-                      {showHints ? 'Hide Candidate Hints' : 'View Coaching Hints'}
-                    </button>
-                    {showHints && (
-                      <div className="mt-2 rounded-xl bg-amber-50/60 p-3.5 border border-amber-200 text-xs text-amber-900 space-y-1">
-                        <span className="font-bold">What interviewers want to hear:</span>
-                        <ul className="list-disc pl-5 space-y-0.5 text-[11px]">
-                          {currentQ.hints.map((h, i) => (
-                            <li key={i}>{h}</li>
-                          ))}
-                        </ul>
+                        {showHints && (
+                          <div className="mt-2.5 p-3.5 rounded-2xl bg-electric-500/10 border border-electric-500/20 text-xs text-slate-300 space-y-1 animate-in fade-in">
+                            <span className="font-bold text-electric-300 block mb-1">Key concepts to incorporate:</span>
+                            {currentQ.hints.map((hint, hIdx) => (
+                              <p key={hIdx} className="flex items-center gap-2">
+                                <span className="h-1.5 w-1.5 rounded-full bg-electric-400"></span>
+                                <span>{hint}</span>
+                              </p>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
-                )}
-              </div>
 
-              {/* Typed Answer Form */}
-              {!evaluation && (
-                <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs">
+                  {/* Answer Input Box */}
                   <form onSubmit={handleEvaluateAnswer} className="space-y-4">
-                    <div>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <label className="text-xs font-semibold text-slate-700">
-                          Your Candidate Response (Typed)
-                        </label>
-                        <span className="text-[11px] text-slate-400">
-                          {userAnswer.split(/\s+/).filter(Boolean).length} words
-                        </span>
-                      </div>
+                    <div className="relative">
                       <textarea
-                        rows={7}
                         value={userAnswer}
                         onChange={(e) => setUserAnswer(e.target.value)}
-                        placeholder="Structure your answer clearly. Walk through your technical reasoning, mention specific trade-offs, and reference real-world project experience where appropriate..."
-                        className="w-full rounded-xl border border-slate-300 p-3.5 text-xs focus:border-brand-500 focus:outline-hidden font-sans leading-relaxed"
+                        placeholder="Type your structured answer here (or click Dictate Answer to speak)... Incorporate the STAR method: Situation, Task, Action, and measurable Result."
+                        rows={6}
+                        className="w-full rounded-2xl bg-cyber-bg border border-slate-800 p-4 text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:border-electric-400 focus:outline-hidden leading-relaxed"
                       />
+
+                      {/* Voice Dictation Button in corner */}
+                      {speechSupported.recognition ? (
+                        <button
+                          type="button"
+                          onClick={toggleListening}
+                          className={`absolute bottom-3 right-3 px-3 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 transition-all ${
+                            isListening
+                              ? 'bg-rose-500/20 border-rose-500 text-rose-300 animate-pulse shadow-glow-sm'
+                              : 'bg-cyber-surface border-slate-700 text-slate-300 hover:text-white'
+                          }`}
+                          title="Dictate your response using Web Speech Recognition"
+                        >
+                          {isListening ? <MicOff className="h-3.5 w-3.5" /> : <Mic className="h-3.5 w-3.5" />}
+                          <span>{isListening ? 'Listening... (Click Stop)' : 'Dictate with Voice'}</span>
+                        </button>
+                      ) : (
+                        <span className="absolute bottom-3 right-3 text-[10px] font-mono text-slate-500">
+                          Speech-to-text not available in this browser
+                        </span>
+                      )}
                     </div>
 
-                    <div className="flex items-center justify-between pt-2">
-                      <span className="text-[11px] text-slate-400">
-                        Evaluated strictly across technical accuracy, problem-solving & communication.
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                      <span className="text-[11px] font-mono text-slate-400">
+                        Word Count: <strong className="text-white">{userAnswer.trim().split(/\s+/).filter(Boolean).length}</strong> words
                       </span>
 
-                      <button
-                        type="submit"
-                        disabled={evaluating || userAnswer.trim().length < 5}
-                        className="rounded-xl bg-brand-600 px-6 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-brand-700 transition-colors disabled:opacity-50 flex items-center gap-2"
-                      >
-                        {evaluating ? (
-                          <>
-                            <RefreshCw className="h-4 w-4 animate-spin" />
-                            <span>Scoring with 100-Pt Rubric...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Send className="h-4 w-4" />
-                            <span>Submit for Evaluation</span>
-                          </>
-                        )}
-                      </button>
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="submit"
+                          disabled={evaluating || !userAnswer.trim()}
+                          className="rounded-xl bg-gradient-to-r from-electric-600 via-blue-600 to-brand-600 px-6 py-2.5 text-xs font-bold text-white shadow-glow-sm hover:scale-105 transition-all flex items-center gap-2 disabled:opacity-50"
+                        >
+                          <Send className="h-4 w-4" />
+                          <span>{evaluating ? 'Grading on Rubric...' : 'Submit Answer for AI Evaluation'}</span>
+                        </button>
+                      </div>
                     </div>
                   </form>
-                </div>
-              )}
 
-              {/* Evaluation Results Component */}
-              {evaluation && (
-                <InterviewScore
-                  evaluation={evaluation}
-                  onRetake={() => setEvaluation(null)}
-                  onNextQuestion={handleNextQuestion}
-                />
+                  {/* Evaluation Result View */}
+                  {evaluating && (
+                    <LoadingState
+                      message="Hiring Committee Evaluation in Progress..."
+                      subtext="Scoring technical correctness (30), problem solving (25), communication (20), examples (15), and clarity (10)."
+                    />
+                  )}
+
+                  {evaluation && (
+                    <div className="mt-8 pt-6 border-t border-slate-800 space-y-6">
+                      <InterviewScore evaluation={evaluation} />
+
+                      {/* Next Question CTA */}
+                      {currentQuestionIndex < questions.length - 1 && (
+                        <div className="flex justify-end pt-4">
+                          <button
+                            onClick={handleNextQuestion}
+                            className="rounded-xl bg-gradient-to-r from-brand-600 to-electric-600 px-6 py-2.5 text-xs font-bold text-white shadow-glow-sm hover:scale-105 transition-all flex items-center gap-2"
+                          >
+                            <span>Proceed to Question {currentQuestionIndex + 2}</span>
+                            <ChevronRight className="h-4 w-4" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           )}

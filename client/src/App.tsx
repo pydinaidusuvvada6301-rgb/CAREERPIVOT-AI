@@ -22,6 +22,7 @@ import { JobRecommendationsPage } from './pages/JobRecommendationsPage';
 import { ProgressPage } from './pages/ProgressPage';
 import { JobApplicationsPage } from './pages/JobApplicationsPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { AdminDashboardPage } from './pages/AdminDashboardPage';
 
 export function App() {
   return (
@@ -130,6 +131,14 @@ export function App() {
             element={
               <ProtectedRoute>
                 <SettingsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute>
+                <AdminDashboardPage />
               </ProtectedRoute>
             }
           />

@@ -52,6 +52,11 @@ export const JobApplicationsPage: React.FC = () => {
     await loadApplications();
   };
 
+  const handleUpdateApplication = async (id: string, app: Partial<JobApplication>) => {
+    await api.updateApplication(id, app);
+    await loadApplications();
+  };
+
   const handleDeleteApplication = async (id: string) => {
     if (confirm('Are you sure you want to remove this application record?')) {
       await api.deleteApplication(id);
@@ -76,9 +81,9 @@ export const JobApplicationsPage: React.FC = () => {
                 </span>
                 <span className="text-xs font-mono text-slate-400">Pipeline & Conversion Analytics</span>
               </div>
-              <h1 className="text-2xl font-extrabold text-white mt-1">Job Application Tracker</h1>
+              <h1 className="text-2xl font-extrabold text-white mt-1">Job Application Tracker 2.0</h1>
               <p className="text-xs text-slate-400 mt-0.5">
-                Track job applications, response velocity, interview loops, and conversion metrics across categories.
+                Track job applications, recruiter contacts, follow-up reminders, CSV export & pipeline conversion.
               </p>
             </div>
           </div>
@@ -98,6 +103,7 @@ export const JobApplicationsPage: React.FC = () => {
               analytics={analytics}
               onAddApplication={handleAddApplication}
               onUpdateStatus={handleUpdateStatus}
+              onUpdateApplication={handleUpdateApplication}
               onDeleteApplication={handleDeleteApplication}
             />
           )}

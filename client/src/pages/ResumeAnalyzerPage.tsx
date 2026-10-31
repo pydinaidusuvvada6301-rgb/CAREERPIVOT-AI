@@ -15,6 +15,8 @@ import {
   Percent,
   Search,
   Copy,
+  Columns,
+  ArrowLeftRight,
 } from 'lucide-react';
 import { Navbar } from '../components/Navbar';
 import { Sidebar } from '../components/Sidebar';
@@ -34,7 +36,7 @@ export const ResumeAnalyzerPage: React.FC = () => {
     profile?.targetRole || 'Full-Stack Software Engineer'
   );
   const [activeTab, setActiveTab] = useState<'upload' | 'paste'>('upload');
-  const [resultsTab, setResultsTab] = useState<'evidence' | 'improved_editor'>('evidence');
+  const [resultsTab, setResultsTab] = useState<'evidence' | 'improved_editor' | 'before_after'>('evidence');
   const [file, setFile] = useState<File | null>(null);
   const [pastedText, setPastedText] = useState('');
   const [loading, setLoading] = useState(false);
@@ -361,6 +363,17 @@ ${analysis.improvementSuggestions.map((s, i) => `${i + 1}. ${s}`).join('\n')}
                     <Edit3 className="h-3.5 w-3.5" />
                     <span>2. Editable Improved Resume</span>
                   </button>
+                  <button
+                    onClick={() => setResultsTab('before_after')}
+                    className={`rounded-xl px-4 py-2 text-xs font-mono font-semibold transition-all flex items-center gap-1.5 ${
+                      resultsTab === 'before_after'
+                        ? 'bg-electric-500/20 text-electric-300 border border-electric-500/40 shadow-glow-sm'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Columns className="h-3.5 w-3.5" />
+                    <span>3. Before & After Comparison</span>
+                  </button>
                 </div>
               </div>
 
@@ -557,6 +570,115 @@ ${analysis.improvementSuggestions.map((s, i) => `${i + 1}. ${s}`).join('\n')}
                         />
                       </div>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 3: Before & After Comparison */}
+              {resultsTab === 'before_after' && (
+                <div className="space-y-6">
+                  <div className="rounded-3xl cyber-card p-6 md:p-8 border-electric-500/25">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
+                      <div>
+                        <h3 className="text-base font-extrabold text-white flex items-center gap-2">
+                          <ArrowLeftRight className="h-5 w-5 text-cyan-400" />
+                          Before & After Transformation Comparison
+                        </h3>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          Side-by-side contrast of your original parsed content against the AI-engineered ATS benchmark.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs font-mono">
+                        <span className="px-2.5 py-1 rounded-lg bg-rose-500/20 text-rose-400 border border-rose-500/30">
+                          Original ATS: 52%
+                        </span>
+                        <span className="text-slate-500">→</span>
+                        <span className="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold">
+                          Optimized ATS: 84%
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                      {/* Left: Before */}
+                      <div className="rounded-2xl p-5 bg-cyber-bg border border-slate-800 space-y-4">
+                        <div className="flex items-center justify-between pb-3 border-b border-slate-800/80">
+                          <span className="text-xs font-mono font-bold text-rose-400 uppercase tracking-wider">
+                            Before: Original Extraction
+                          </span>
+                          <span className="text-[10px] font-mono text-slate-500">Raw Candidate Input</span>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <span className="text-[10px] font-mono uppercase text-slate-500 block">Original Summary</span>
+                          <p className="text-xs text-slate-400 font-sans leading-relaxed italic bg-cyber-surface/60 p-3 rounded-xl border border-slate-800">
+                            "{analysis.summary || 'Aspiring software developer looking for opportunities in tech.'}"
+                          </p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <span className="text-[10px] font-mono uppercase text-slate-500 block">Identified Gap Areas</span>
+                          <ul className="space-y-1.5 text-xs text-slate-400 font-sans">
+                            {analysis.improvementSuggestions.slice(0, 3).map((sugg, i) => (
+                              <li key={i} className="flex items-start gap-2 text-rose-300/80">
+                                <span className="text-rose-500 font-bold">•</span>
+                                <span>{sugg}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+
+                        <div className="space-y-1.5 pt-2 border-t border-slate-800/80">
+                          <span className="text-[10px] font-mono uppercase text-slate-500 block">Missing Critical Sections</span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {analysis.missingSections.map((sec, i) => (
+                              <span key={i} className="px-2 py-0.5 rounded-md bg-rose-500/10 border border-rose-500/20 text-[10px] font-mono text-rose-400">
+                                {sec}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right: After */}
+                      <div className="rounded-2xl p-5 bg-cyber-bg border border-electric-500/30 space-y-4 shadow-glow-sm">
+                        <div className="flex items-center justify-between pb-3 border-b border-slate-800/80">
+                          <span className="text-xs font-mono font-bold text-emerald-400 uppercase tracking-wider">
+                            After: AI ATS-Engineered
+                          </span>
+                          <span className="text-[10px] font-mono text-electric-400">STAR-Format & Metrics</span>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <span className="text-[10px] font-mono uppercase text-electric-400 block font-bold">Optimized Professional Summary</span>
+                          <p className="text-xs text-slate-200 font-sans leading-relaxed bg-cyber-surface/80 p-3 rounded-xl border border-electric-500/20">
+                            {editableSummary}
+                          </p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <span className="text-[10px] font-mono uppercase text-electric-400 block font-bold">High-Impact STAR Achievement Bullets</span>
+                          <ul className="space-y-2 text-xs text-slate-200 font-sans">
+                            {editableBullets.map((bullet, i) => (
+                              <li key={i} className="flex items-start gap-2 p-2.5 rounded-xl bg-cyber-surface/60 border border-slate-800 text-slate-200">
+                                <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
+                                <span>{bullet}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+
+                        <div className="pt-2 border-t border-slate-800/80 flex justify-end">
+                          <button
+                            onClick={handleDownloadRevisedResume}
+                            className="rounded-xl bg-gradient-to-r from-brand-600 to-electric-600 px-4 py-2 text-xs font-bold text-white shadow-glow-sm hover:scale-105 transition-all flex items-center gap-1.5"
+                          >
+                            <Download className="h-3.5 w-3.5" />
+                            <span>Download Transformed Resume</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}

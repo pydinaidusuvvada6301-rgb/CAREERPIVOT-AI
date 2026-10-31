@@ -5,8 +5,12 @@ export interface JobApplicationRecord {
   jobUrl?: string;
   jobCategory: string;
   applicationDate: string;
-  status: 'Saved' | 'Applied' | 'Interview' | 'Rejected' | 'Offer';
+  status: 'Saved' | 'Applied' | 'Interested' | 'Assessment' | 'Interview' | 'Offer' | 'Rejected' | 'Withdrawn';
   notes?: string;
+  recruiterName?: string;
+  recruiterEmail?: string;
+  interviewDate?: string;
+  followUpDate?: string;
 }
 
 export interface ApplicationAnalytics {

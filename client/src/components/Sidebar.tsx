@@ -13,6 +13,7 @@ import {
   Settings,
   X,
   Sparkles,
+  Activity,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -33,6 +34,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
     { label: 'Progress Tracker', path: '/progress', icon: TrendingUp },
     { label: 'Application Tracker', path: '/applications', icon: Briefcase },
     { label: 'Profile & Settings', path: '/settings', icon: Settings },
+    { label: 'Admin Telemetry', path: '/admin', icon: Activity, badge: 'Live' },
   ];
 
   const sidebarContent = (

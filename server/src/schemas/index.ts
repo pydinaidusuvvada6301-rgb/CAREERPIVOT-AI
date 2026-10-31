@@ -163,7 +163,7 @@ export type ProjectRecommendOutput = z.infer<typeof projectRecommendOutputSchema
 // ==========================================
 export const interviewGenerateSchema = z.object({
   targetRole: z.string().min(2),
-  interviewType: z.enum(['technical', 'hr']),
+  interviewType: z.enum(['technical', 'hr', 'behavioral', 'coding']),
   difficulty: z.enum(['beginner', 'intermediate', 'advanced']),
   questionCount: z.number().min(1).max(10).default(5),
 });
@@ -179,7 +179,7 @@ export const interviewEvaluateSchema = z.object({
   question: z.string(),
   userAnswer: z.string().min(5, 'Answer must be at least 5 characters long'),
   targetRole: z.string(),
-  interviewType: z.enum(['technical', 'hr']).default('technical'),
+  interviewType: z.enum(['technical', 'hr', 'behavioral', 'coding']).default('technical'),
   difficulty: z.enum(['beginner', 'intermediate', 'advanced']).default('intermediate'),
 });
 
@@ -213,8 +213,12 @@ export const applicationCreateSchema = z.object({
   jobUrl: z.string().url('Invalid URL format').optional().or(z.literal('')),
   jobCategory: z.string().default('Software Engineering'),
   applicationDate: z.string().default(() => new Date().toISOString().split('T')[0]),
-  status: z.enum(['Saved', 'Applied', 'Interview', 'Rejected', 'Offer']).default('Applied'),
+  status: z.enum(['Saved', 'Applied', 'Interested', 'Assessment', 'Interview', 'Offer', 'Rejected', 'Withdrawn']).default('Applied'),
   notes: z.string().optional(),
+  recruiterName: z.string().optional(),
+  recruiterEmail: z.string().optional(),
+  interviewDate: z.string().optional(),
+  followUpDate: z.string().optional(),
 });
 
 export const applicationUpdateSchema = applicationCreateSchema.partial();
