@@ -13,7 +13,24 @@ import {
   AssessmentResult,
 } from '../types';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+function getApiBaseUrl(): string {
+  // If explicitly configured in environment, prioritize it
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL.replace(/\/+$/, '');
+  }
+
+  // If in browser on any non-localhost domain (Vercel, preview, custom domain):
+  if (
+    typeof window !== 'undefined' &&
+    window.location.hostname !== 'localhost' &&
+    window.location.hostname !== '127.0.0.1'
+  ) {
+    return 'https://careerpivot-ai.onrender.com/api';
+  }
+
+  // Local development fallback
+  return 'http://localhost:5000/api';
+}
 
 class ApiClient {
   private getToken(): string | null {
@@ -37,23 +54,51 @@ class ApiClient {
       headers.set('Content-Type', 'application/json');
     }
 
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      ...options,
-      headers,
-    });
+    const baseUrl = getApiBaseUrl();
+    const url = `${baseUrl}${endpoint}`;
 
-    if (!response.ok) {
-      let errorMessage = `HTTP Error ${response.status}`;
-      try {
-        const errorData = await response.json();
-        errorMessage = errorData.message || errorData.error || errorMessage;
-      } catch {
-        // use fallback status
+    // 45-second timeout for Render cold start tolerance
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 45000);
+
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers,
+        signal: options.signal || controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        let errorMessage = `HTTP Error ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } catch {
+          // use fallback status
+        }
+        throw new Error(errorMessage);
       }
-      throw new Error(errorMessage);
-    }
 
-    return response.json();
+      return response.json();
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+
+      if (err.name === 'AbortError') {
+        throw new Error(
+          'Request timed out. The Render backend may be waking up from cold sleep (takes ~45s). Please click Retry in a few seconds.'
+        );
+      }
+
+      if (err.message && err.message.toLowerCase().includes('failed to fetch')) {
+        throw new Error(
+          `Unable to connect to backend service (${baseUrl}). The Render free instance may be spinning up from sleep (~40s). Please wait a moment and click Retry.`
+        );
+      }
+
+      throw err;
+    }
   }
 
   // Health

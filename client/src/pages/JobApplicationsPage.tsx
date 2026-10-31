@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { Navbar } from '../components/Navbar';
 import { Sidebar } from '../components/Sidebar';
+import { AICareerMentor } from '../components/AICareerMentor';
 import { api } from '../api/client';
 import { JobApplication, ApplicationAnalytics } from '../types';
 import { ApplicationTable } from '../components/ApplicationTable';
@@ -59,7 +60,7 @@ export const JobApplicationsPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="min-h-screen bg-cyber-bg text-cyber-text flex flex-col">
       <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
 
       <div className="flex-1 flex">
@@ -67,16 +68,16 @@ export const JobApplicationsPage: React.FC = () => {
 
         <main className="flex-1 p-4 md:p-8 max-w-7xl mx-auto w-full space-y-8">
           {/* Header */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-electric-500/15">
             <div>
               <div className="flex items-center gap-2">
-                <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-bold text-brand-700 border border-brand-200">
+                <span className="rounded-full bg-electric-500/15 px-2.5 py-0.5 text-xs font-mono font-bold text-electric-400 border border-electric-500/30">
                   Module 7
                 </span>
-                <span className="text-xs text-slate-500">Pipeline & Conversion Analytics</span>
+                <span className="text-xs font-mono text-slate-400">Pipeline & Conversion Analytics</span>
               </div>
-              <h1 className="text-2xl font-bold text-navy-900 mt-1">Job Application Tracker</h1>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <h1 className="text-2xl font-extrabold text-white mt-1">Job Application Tracker</h1>
+              <p className="text-xs text-slate-400 mt-0.5">
                 Track job applications, response velocity, interview loops, and conversion metrics across categories.
               </p>
             </div>
@@ -86,7 +87,7 @@ export const JobApplicationsPage: React.FC = () => {
 
           {loading && (
             <LoadingState
-              message="Loading Application Records & Computing Pipeline Analytics..."
+              message="Connecting to Backend API & Computing Pipeline Analytics..."
               subtext="Aggregating response rates, interview conversion percentages, and category distributions."
             />
           )}
@@ -102,6 +103,8 @@ export const JobApplicationsPage: React.FC = () => {
           )}
         </main>
       </div>
+
+      <AICareerMentor />
     </div>
   );
 };
