@@ -27,8 +27,14 @@ export const RegisterPage: React.FC = () => {
 
     setLoading(true);
     try {
-      await signUpWithEmail(email, password, fullName);
-      navigate('/onboarding');
+      const res = await signUpWithEmail(email, password, fullName);
+      if (res.requiresConfirmation) {
+        setRegisteredNotice(
+          `Account created for ${email}! Please check your email inbox to confirm your address before logging in (or toggle "Confirm email" OFF in your Supabase Auth settings).`
+        );
+      } else {
+        navigate('/onboarding');
+      }
     } catch (err: any) {
       setError(err.message || 'Registration failed. Please try again.');
     } finally {

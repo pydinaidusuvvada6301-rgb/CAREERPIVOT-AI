@@ -26,7 +26,18 @@ export const LoginPage: React.FC = () => {
       await signInWithEmail(email, password);
       navigate(from, { replace: true });
     } catch (err: any) {
-      setError(err.message || 'Login failed. Please verify your credentials.');
+      const msg = err.message || '';
+      if (msg.toLowerCase().includes('email not confirmed')) {
+        setError(
+          'Email not confirmed! Supabase requires you to click the confirmation link sent to your email. (Quick fix: In your Supabase Dashboard -> Authentication -> Providers -> Email, turn "Confirm email" OFF for instant login).'
+        );
+      } else if (msg.toLowerCase().includes('invalid login credentials')) {
+        setError(
+          'Invalid email or password. If you have not registered this account yet, please click "Create an account" below to register first.'
+        );
+      } else {
+        setError(msg || 'Login failed. Please verify your credentials.');
+      }
     } finally {
       setLoading(false);
     }

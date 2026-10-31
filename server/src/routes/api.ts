@@ -21,7 +21,7 @@ import {
 import { requireAuth } from '../middleware/auth.js';
 import { uploadResume } from '../middleware/upload.js';
 import { aiLimiter } from '../middleware/rateLimit.js';
-import { isGeminiConfigured, isSupabaseConfigured } from '../config/index.js';
+import { isGeminiConfigured, isSupabaseConfigured, getSupabase } from '../config/index.js';
 
 const router = Router();
 
@@ -39,6 +39,56 @@ router.get('/health', (_req, res) => {
       supabaseConfigured: isSupabaseConfigured,
     },
   });
+});
+
+// ==========================================
+// DIRECT SECURE REGISTRATION (Bypasses Email Rate Limits)
+// ==========================================
+router.post('/auth/register', async (req, res) => {
+  try {
+    const { email, password, fullName } = req.body;
+    if (!email || !password) {
+      res.status(400).json({ error: 'Email and password are required' });
+      return;
+    }
+
+    const supabase = getSupabase();
+    if (!supabase) {
+      res.status(500).json({ error: 'Database service unavailable' });
+      return;
+    }
+
+    // Use admin service role to create user and auto-confirm email
+    const { data, error } = await supabase.auth.admin.createUser({
+      email: email.trim(),
+      password,
+      email_confirm: true,
+      user_metadata: { full_name: fullName || '' },
+    });
+
+    if (error) {
+      if (
+        error.message.toLowerCase().includes('already registered') ||
+        error.message.toLowerCase().includes('already exists')
+      ) {
+        res.status(400).json({
+          error: 'User already registered',
+          message: 'This email is already registered. Please sign in on the login page.',
+        });
+        return;
+      }
+      res.status(400).json({ error: 'Registration error', message: error.message });
+      return;
+    }
+
+    res.status(201).json({
+      success: true,
+      user: data.user,
+      message: 'Account created and verified successfully.',
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Server error', message: err.message });
+  }
 });
 
 // ==========================================

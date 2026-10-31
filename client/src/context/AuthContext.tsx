@@ -12,7 +12,7 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<void>;
   signInWithGithub: () => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
-  signUpWithEmail: (email: string, password: string, fullName: string) => Promise<void>;
+  signUpWithEmail: (email: string, password: string, fullName: string) => Promise<{ requiresConfirmation: boolean }>;
   resetPassword: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
@@ -129,6 +129,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           targetDuration: data.target_duration,
           avatarUrl: data.avatar_url,
         });
+      } else {
+        // Fallback profile from auth session if SQL migration is not yet run
+        setProfile({
+          id: userId,
+          email: user?.email || '',
+          fullName: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Candidate',
+          targetRole: 'Full-Stack Software Engineer',
+          careerStage: 'Fresh Graduate',
+          currentSkills: ['JavaScript', 'HTML/CSS', 'Python'],
+          weeklyHours: 12,
+        });
       }
     } catch (err) {
       console.warn('Could not fetch Supabase profile:', err);
@@ -185,7 +196,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     const { data, error } = await supabase.auth.signInWithPassword({
-      email,
+      email: email.trim(),
       password,
     });
     if (error) throw error;
@@ -198,19 +209,57 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Email Registration
-  const signUpWithEmail = async (email: string, password: string, fullName: string) => {
+  const signUpWithEmail = async (email: string, password: string, fullName: string): Promise<{ requiresConfirmation: boolean }> => {
+    const cleanEmail = email.trim();
+
+    // 1. Attempt registration via Backend Admin API (bypasses Supabase email rate limits and auto-confirms)
+    try {
+      const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+      const response = await fetch(`${apiBase}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: cleanEmail, password, fullName }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        // Successfully created and auto-confirmed! Sign in immediately
+        if (supabase) {
+          const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
+            email: cleanEmail,
+            password,
+          });
+          if (!loginError && loginData.session) {
+            setSession(loginData.session);
+            setUser(loginData.user);
+            localStorage.setItem('careerpivot_token', loginData.session.access_token);
+            await fetchProfile(loginData.user.id);
+            return { requiresConfirmation: false };
+          }
+        }
+      } else if (result.error && (result.error.includes('already registered') || result.message?.includes('already registered'))) {
+        throw new Error(result.message || 'This email is already registered. Please click "Sign in" below.');
+      }
+    } catch (adminErr: any) {
+      if (adminErr.message && adminErr.message.includes('already registered')) {
+        throw adminErr;
+      }
+      console.warn('Backend admin signup fallback to direct Supabase client:', adminErr);
+    }
+
     if (!isSupabaseConfigured || !supabase) {
       // Offline mode registration: create local profile
       const newUser: User = {
         ...DEMO_USER,
         id: 'user-' + Date.now(),
-        email,
+        email: cleanEmail,
         user_metadata: { full_name: fullName },
       };
       const newProfile: UserProfile = {
         ...DEMO_PROFILE,
         id: newUser.id,
-        email,
+        email: cleanEmail,
         fullName,
       };
       setUser(newUser);
@@ -218,21 +267,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('careerpivot_demo_active', 'true');
       localStorage.setItem('careerpivot_profile', JSON.stringify(newProfile));
       localStorage.setItem('careerpivot_token', 'demo-token');
-      return;
+      return { requiresConfirmation: false };
     }
 
+    // 2. Direct Supabase client fallback
     const { data, error } = await supabase.auth.signUp({
-      email,
+      email: cleanEmail,
       password,
       options: {
         data: { full_name: fullName },
         emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     });
-    if (error) throw error;
-    if (data.user) {
-      setUser(data.user);
+    if (error) {
+      if (error.message.toLowerCase().includes('rate limit')) {
+        throw new Error(
+          'Email rate limit reached on Supabase. Your account may already be created! Please click "Sign in" below to log in directly.'
+        );
+      }
+      throw error;
     }
+
+    if (data.session) {
+      setSession(data.session);
+      setUser(data.user);
+      localStorage.setItem('careerpivot_token', data.session.access_token);
+      await fetchProfile(data.user!.id);
+      return { requiresConfirmation: false };
+    }
+
+    return { requiresConfirmation: true };
   };
 
   // Password Reset
