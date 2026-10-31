@@ -1,0 +1,255 @@
+import {
+  ResumeParsedData,
+  SkillGapData,
+  RoadmapData,
+  PortfolioProject,
+  InterviewQuestionItem,
+  InterviewEvaluation,
+  JobApplication,
+  ApplicationAnalytics,
+  ProgressSummary,
+  ProgressRecommendations,
+} from '../types';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+
+class ApiClient {
+  private getToken(): string | null {
+    // Check localStorage for active session token or demo token
+    const token = localStorage.getItem('careerpivot_token');
+    return token || 'demo-token';
+  }
+
+  private async request<T>(
+    endpoint: string,
+    options: RequestInit = {}
+  ): Promise<T> {
+    const token = this.getToken();
+    const headers = new Headers(options.headers || {});
+
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`);
+    }
+
+    if (!headers.has('Content-Type') && !(options.body instanceof FormData)) {
+      headers.set('Content-Type', 'application/json');
+    }
+
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...options,
+      headers,
+    });
+
+    if (!response.ok) {
+      let errorMessage = `HTTP Error ${response.status}`;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorData.error || errorMessage;
+      } catch {
+        // use fallback status
+      }
+      throw new Error(errorMessage);
+    }
+
+    return response.json();
+  }
+
+  // Health
+  async checkHealth() {
+    return this.request<{ status: string; capabilities: any }>('/health');
+  }
+
+  // 1. Resume Analyzer
+  async analyzeResume(data: FormData | { text: string; targetRole?: string }) {
+    if (data instanceof FormData) {
+      return this.request<{
+        success: boolean;
+        analysis: ResumeParsedData;
+        isLiveAi: boolean;
+        notice?: string;
+      }>('/resume/analyze', {
+        method: 'POST',
+        body: data,
+      });
+    }
+
+    return this.request<{
+      success: boolean;
+      analysis: ResumeParsedData;
+      isLiveAi: boolean;
+      notice?: string;
+    }>('/resume/analyze', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // 2. Skill Gap Analyzer
+  async analyzeSkillGap(payload: {
+    targetRole: string;
+    resumeText?: string;
+    resumeSkills?: string[];
+    jobDescriptionText?: string;
+    jobDescriptionId?: string;
+  }) {
+    return this.request<{
+      success: boolean;
+      data: SkillGapData;
+      isLiveAi: boolean;
+      notice?: string;
+    }>('/skills/analyze', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  // 3. Learning Roadmap
+  async generateRoadmap(payload: {
+    targetRole: string;
+    skillGaps: string[];
+    existingSkills?: string[];
+    weeklyHours?: number;
+    learningPreferences?: string;
+  }) {
+    return this.request<{
+      success: boolean;
+      data: RoadmapData;
+      isLiveAi: boolean;
+      notice?: string;
+    }>('/roadmap/generate', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  // 4. Portfolio Projects
+  async recommendProjects(payload: {
+    targetRole: string;
+    skillGaps: string[];
+    existingSkills?: string[];
+  }) {
+    return this.request<{
+      success: boolean;
+      data: { targetRole: string; projects: PortfolioProject[] };
+      isLiveAi: boolean;
+      notice?: string;
+    }>('/projects/recommend', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  // 5. Mock Interview
+  async generateInterview(payload: {
+    targetRole: string;
+    interviewType: 'technical' | 'hr';
+    difficulty: 'beginner' | 'intermediate' | 'advanced';
+    questionCount?: number;
+  }) {
+    return this.request<{
+      success: boolean;
+      questions: InterviewQuestionItem[];
+      isLiveAi: boolean;
+    }>('/interview/generate', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async evaluateInterview(payload: {
+    question: string;
+    userAnswer: string;
+    targetRole: string;
+    interviewType: 'technical' | 'hr';
+    difficulty: 'beginner' | 'intermediate' | 'advanced';
+  }) {
+    return this.request<{
+      success: boolean;
+      evaluation: InterviewEvaluation;
+      isLiveAi: boolean;
+      notice?: string;
+    }>('/interview/evaluate', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  // Verified Sample Job Postings
+  async getSampleJobs() {
+    return this.request<{
+      success: boolean;
+      samples: Array<{
+        id: string;
+        title: string;
+        company: string;
+        location: string;
+        sourceUrl: string;
+        retrievalDate: string;
+        requiredSkills: string[];
+        preferredSkills: string[];
+        responsibilities: string[];
+        technicalRequirements: string[];
+      }>;
+    }>('/job-descriptions/samples');
+  }
+
+  // 6. Progress
+  async getProgress() {
+    return this.request<{
+      success: boolean;
+      progress: ProgressSummary;
+      recommendations: ProgressRecommendations;
+      isLiveAi: boolean;
+    }>('/progress');
+  }
+
+  async updateProgress(payload: { taskId?: string; completed?: boolean; targetRole?: string }) {
+    return this.request<{
+      success: boolean;
+      progress: ProgressSummary;
+      message: string;
+    }>('/progress', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  // 7. Applications
+  async getApplications() {
+    return this.request<{
+      success: boolean;
+      applications: JobApplication[];
+      analytics: ApplicationAnalytics;
+    }>('/applications');
+  }
+
+  async createApplication(payload: Omit<JobApplication, 'id'>) {
+    return this.request<{
+      success: boolean;
+      application: JobApplication;
+      message: string;
+    }>('/applications', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async updateApplication(id: string, payload: Partial<Omit<JobApplication, 'id'>>) {
+    return this.request<{
+      success: boolean;
+      application: JobApplication;
+      message: string;
+    }>(`/applications/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async deleteApplication(id: string) {
+    return this.request<{ success: boolean; message: string }>(`/applications/${id}`, {
+      method: 'DELETE',
+    });
+  }
+}
+
+export const api = new ApiClient();
