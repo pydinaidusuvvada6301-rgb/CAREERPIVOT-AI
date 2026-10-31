@@ -199,3 +199,51 @@ export interface ProgressRecommendations {
   revisedScheduleFocus: string;
   portfolioRefinements: string[];
 }
+
+export interface CareerAssessmentInput {
+  degree: string;
+  branch: string;
+  academicYear: string;
+  technicalSkills: string[];
+  programmingLanguages: string[];
+  interests: string[];
+  workExperience: string;
+  preferredIndustries: string[];
+  careerGoal: string;
+  preferredEnvironment: 'Remote' | 'Hybrid' | 'On-site' | 'Flexible';
+  learningPreferences: string[];
+}
+
+export interface CareerRecommendation {
+  roleTitle: string;
+  matchScore: number;
+  matchExplanation: string;
+  marketDemandTier: 'High' | 'Very High' | 'Exceptional';
+  requiredTechnicalSkills: string[];
+  requiredSoftSkills: string[];
+  userStrengths: string[];
+  missingSkills: string[];
+  difficultyToPivot: 'Beginner Friendly' | 'Moderate Sprint' | 'Intensive Focus';
+  estimatedTimeToReady: string;
+  recommendedFirstProject: {
+    title: string;
+    description: string;
+  };
+  learningRoadmapSummary: string[];
+}
+
+export interface AssessmentResult {
+  topRecommendations: CareerRecommendation[];
+  alternativePaths: string[];
+  executiveSummary: string;
+  isLiveAi: boolean;
+}
+
+export interface MentorMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+  suggestedActions?: string[];
+}
+

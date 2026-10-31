@@ -6,6 +6,8 @@ import { recommendProjects } from '../services/projectRecommender.js';
 import { generateInterviewQuestions } from '../services/interviewGenerator.js';
 import { evaluateInterviewAnswer } from '../services/interviewEvaluator.js';
 import { extractTextFromBuffer } from '../utils/textExtractor.js';
+import { processCareerAssessment } from '../services/assessmentService.js';
+import { generateMentorResponse } from '../services/mentorService.js';
 import {
   resumeAnalyzeSchema,
   skillGapRequestSchema,
@@ -381,3 +383,37 @@ export const getSampleJobsHandler = (_req: Request, res: Response): void => {
     note: 'These verified benchmark descriptions represent industry standard expectations for MVP testing.',
   });
 };
+
+// 8. Career Assessment & Recommendations Handler (Part 5 & 6)
+export const assessCareerHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const input = req.body;
+    const result = await processCareerAssessment(input);
+    res.status(200).json({
+      success: true,
+      assessment: result,
+      isLiveAi: result.isLiveAi,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 9. AI Career Mentor Chat Handler (Part 10)
+export const mentorChatHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { message, history, userProfile } = req.body;
+    if (!message || typeof message !== 'string') {
+      res.status(400).json({ error: 'Message is required' });
+      return;
+    }
+    const response = await generateMentorResponse({ message, history, userProfile });
+    res.status(200).json({
+      success: true,
+      ...response,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+

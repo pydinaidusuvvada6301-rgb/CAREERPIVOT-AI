@@ -9,6 +9,8 @@ import {
   ApplicationAnalytics,
   ProgressSummary,
   ProgressRecommendations,
+  CareerAssessmentInput,
+  AssessmentResult,
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
@@ -250,6 +252,37 @@ class ApiClient {
       method: 'DELETE',
     });
   }
+
+  // 8. Career Assessment & Recommendations (Part 5 & 6)
+  async assessCareer(payload: CareerAssessmentInput) {
+    return this.request<{
+      success: boolean;
+      assessment: AssessmentResult;
+      isLiveAi: boolean;
+    }>('/career/assess', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  // 9. AI Career Mentor Chat (Part 10)
+  async sendMentorMessage(payload: {
+    message: string;
+    history?: Array<{ role: 'user' | 'assistant'; content: string }>;
+    userProfile?: any;
+  }) {
+    return this.request<{
+      success: boolean;
+      reply: string;
+      suggestedActions: string[];
+      recommendedTopic?: string;
+      isLiveAi: boolean;
+    }>('/mentor/chat', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
 }
 
 export const api = new ApiClient();
+

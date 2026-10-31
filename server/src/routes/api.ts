@@ -7,6 +7,8 @@ import {
   generateInterviewHandler,
   evaluateInterviewHandler,
   getSampleJobsHandler,
+  assessCareerHandler,
+  mentorChatHandler,
 } from '../controllers/careerController.js';
 import {
   getApplicationsHandler,
@@ -148,6 +150,27 @@ router.post(
   aiLimiter,
   evaluateInterviewHandler
 );
+
+// ==========================================
+// AI CAREER ASSESSMENT & RECOMMENDATIONS (Part 5 & 6)
+// ==========================================
+router.post(
+  '/career/assess',
+  requireAuth,
+  aiLimiter,
+  assessCareerHandler
+);
+
+// ==========================================
+// AI CAREER MENTOR (Part 10)
+// ==========================================
+router.post(
+  '/mentor/chat',
+  requireAuth,
+  aiLimiter,
+  mentorChatHandler
+);
+
 
 // ==========================================
 // VERIFIED SAMPLE JOB POSTINGS

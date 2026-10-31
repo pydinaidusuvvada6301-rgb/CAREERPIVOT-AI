@@ -15,10 +15,13 @@ import {
   Award,
   ChevronRight,
   Flame,
+  Compass,
+  Cpu,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Navbar } from '../components/Navbar';
 import { Sidebar } from '../components/Sidebar';
+import { AICareerMentor } from '../components/AICareerMentor';
 import { api } from '../api/client';
 import { ProgressSummary, ProgressRecommendations } from '../types';
 
@@ -52,15 +55,24 @@ export const DashboardPage: React.FC = () => {
   const totalTasks = progress?.totalTasks || 20;
   const streakDays = progress?.streakDays || 4;
   const avgInterview = progress?.averageInterviewScore || 82;
+  const percentComplete = Math.round((tasksCompleted / totalTasks) * 100);
 
   const modules = [
     {
-      title: 'Resume Analyzer',
-      desc: 'Extract verifiable technical evidence & improve ATS readability',
+      title: 'AI Career Assessment',
+      desc: 'Multi-dimensional evaluation mapping degree & skills to top roles',
+      path: '/assessment',
+      icon: Compass,
+      badge: 'Start Here',
+      color: 'border-neon-purple text-neon-purple',
+    },
+    {
+      title: 'Resume Evidence Analyzer',
+      desc: 'Extract verifiable technical evidence, ATS scores & edit bullets',
       path: '/resume-analyzer',
       icon: FileText,
       badge: 'Step 1',
-      color: 'from-blue-600 to-indigo-600',
+      color: 'border-blue-500 text-blue-400',
     },
     {
       title: 'Skill Gap Analyzer',
@@ -68,7 +80,7 @@ export const DashboardPage: React.FC = () => {
       path: '/skill-gap',
       icon: Target,
       badge: 'Step 2',
-      color: 'from-emerald-600 to-teal-600',
+      color: 'border-emerald-500 text-emerald-400',
     },
     {
       title: 'Learning Roadmap',
@@ -76,7 +88,7 @@ export const DashboardPage: React.FC = () => {
       path: '/roadmap',
       icon: Map,
       badge: 'Step 3',
-      color: 'from-purple-600 to-pink-600',
+      color: 'border-electric-400 text-electric-400',
     },
     {
       title: 'Portfolio Projects',
@@ -84,28 +96,36 @@ export const DashboardPage: React.FC = () => {
       path: '/projects',
       icon: FolderGit2,
       badge: 'Step 4',
-      color: 'from-amber-600 to-orange-600',
+      color: 'border-amber-500 text-amber-400',
     },
     {
       title: 'AI Mock Interview',
-      desc: 'Evaluate technical answers on the 100-point rubric',
+      desc: 'Practice technical & HR drills on the 100-point rubric',
       path: '/mock-interview',
       icon: Mic,
       badge: 'Step 5',
-      color: 'from-rose-600 to-red-600',
+      color: 'border-rose-500 text-rose-400',
     },
     {
-      title: 'Job Application Tracker',
+      title: 'Job Recommendations',
+      desc: 'Search genuine roles filtered by remote, role, & match score',
+      path: '/jobs',
+      icon: Briefcase,
+      badge: 'Step 6',
+      color: 'border-cyan-500 text-cyan-400',
+    },
+    {
+      title: 'Application Pipeline',
       desc: 'Track response rates, interview loops, and conversion metrics',
       path: '/applications',
       icon: Briefcase,
-      badge: 'Step 6',
-      color: 'from-cyan-600 to-blue-600',
+      badge: 'Tracker',
+      color: 'border-purple-500 text-purple-400',
     },
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="min-h-screen bg-cyber-bg text-cyber-text flex flex-col">
       <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
 
       <div className="flex-1 flex">
@@ -113,150 +133,121 @@ export const DashboardPage: React.FC = () => {
 
         <main className="flex-1 p-4 md:p-8 max-w-7xl mx-auto w-full space-y-8">
           {/* Welcome Banner */}
-          <div className="rounded-3xl border border-slate-200 bg-gradient-to-r from-navy-900 via-slate-900 to-navy-950 p-6 md:p-8 text-white shadow-md relative overflow-hidden">
-            <div className="absolute right-0 top-0 -mt-10 -mr-10 h-64 w-64 rounded-full bg-brand-500/10 blur-3xl" />
-            <div className="relative z-10 max-w-2xl">
-              <div className="inline-flex items-center gap-2 rounded-full bg-brand-500/20 px-3 py-1 text-xs font-semibold text-brand-300 border border-brand-400/20 mb-3">
-                <Sparkles className="h-3.5 w-3.5 text-brand-300" />
-                <span>Target Career: {targetRole}</span>
+          <div className="relative overflow-hidden rounded-3xl cyber-card p-6 md:p-8 border-electric-500/25 bg-gradient-to-r from-cyber-surface via-cyber-bg to-cyber-surface">
+            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-2 w-2 rounded-full bg-electric-400 animate-pulse shadow-glow-sm"></span>
+                  <span className="text-xs font-mono font-semibold text-electric-400 uppercase tracking-wider">
+                    Candidate Intelligence Hub
+                  </span>
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-white">
+                  Welcome back, {profile?.fullName || user?.email?.split('@')[0] || 'Candidate'}!
+                </h1>
+                <p className="text-xs sm:text-sm text-slate-300 max-w-xl">
+                  Target Role: <strong className="text-electric-300 font-mono">{targetRole}</strong> • Education: <span className="text-slate-300">{profile?.education || 'Computer Science / Engineering'}</span>
+                </p>
               </div>
-              <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
-                Welcome back, {profile?.fullName || user?.email?.split('@')[0] || 'Candidate'}
-              </h1>
-              <p className="mt-2 text-xs md:text-sm text-slate-300 leading-relaxed">
-                Your career pivot trajectory is active. Complete today's milestone to keep your {streakDays}-day streak burning.
-              </p>
 
-              <div className="mt-6 flex flex-wrap gap-3">
+              <div className="flex flex-wrap items-center gap-3">
+                <Link
+                  to="/assessment"
+                  className="rounded-xl border border-neon-purple/40 bg-neon-purple/10 px-4 py-2.5 text-xs font-bold text-neon-purple hover:bg-neon-purple/20 transition-all flex items-center gap-1.5"
+                >
+                  <Compass className="h-4 w-4" />
+                  <span>Retake Assessment</span>
+                </Link>
+
                 <Link
                   to="/roadmap"
-                  className="rounded-xl bg-brand-500 hover:bg-brand-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition-colors flex items-center gap-2"
+                  className="rounded-xl bg-gradient-to-r from-brand-600 via-electric-600 to-blue-600 px-5 py-2.5 text-xs font-bold text-white shadow-glow-sm hover:shadow-glow-md transition-all flex items-center gap-1.5"
                 >
-                  <span>Continue Learning Plan</span>
+                  <span>Continue 4-Week Sprint</span>
                   <ArrowRight className="h-4 w-4" />
                 </Link>
-                <Link
-                  to="/resume-analyzer"
-                  className="rounded-xl bg-white/10 hover:bg-white/15 px-4 py-2.5 text-xs font-semibold text-white border border-white/15 transition-colors"
-                >
-                  Analyze Resume
-                </Link>
               </div>
             </div>
           </div>
 
-          {/* Quick Metrics Ribbon */}
+          {/* Core Analytics Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
-              <div className="flex items-center justify-between text-slate-500">
-                <span className="text-xs font-semibold uppercase tracking-wider">Role Fit Match</span>
-                <Target className="h-4 w-4 text-brand-600" />
+            <div className="rounded-2xl cyber-card p-4 flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-mono text-slate-400 uppercase">Roadmap Progress</p>
+                <p className="text-2xl font-black text-white mt-0.5">{percentComplete}%</p>
+                <p className="text-[10px] text-electric-400 mt-0.5 font-mono">{tasksCompleted} of {totalTasks} milestones</p>
               </div>
-              <div className="mt-2 flex items-baseline gap-2">
-                <span className="text-2xl font-black text-navy-900">68%</span>
-                <span className="text-xs font-semibold text-emerald-600">+14% this month</span>
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-electric-500/10 text-electric-400 border border-electric-500/20">
+                <Map className="h-5 w-5" />
               </div>
-              <p className="mt-1 text-[11px] text-slate-400">Benchmarked against {targetRole}</p>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
-              <div className="flex items-center justify-between text-slate-500">
-                <span className="text-xs font-semibold uppercase tracking-wider">Sprint Milestones</span>
-                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+            <div className="rounded-2xl cyber-card p-4 flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-mono text-slate-400 uppercase">Active Streak</p>
+                <p className="text-2xl font-black text-amber-400 mt-0.5">{streakDays} Days</p>
+                <p className="text-[10px] text-slate-400 mt-0.5 font-mono">Daily learning activity</p>
               </div>
-              <div className="mt-2 flex items-baseline gap-2">
-                <span className="text-2xl font-black text-navy-900">{tasksCompleted} / {totalTasks}</span>
-                <span className="text-xs font-semibold text-brand-600">
-                  {Math.round((tasksCompleted / totalTasks) * 100)}%
-                </span>
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                <Flame className="h-5 w-5" />
               </div>
-              <p className="mt-1 text-[11px] text-slate-400">4-week sprint progress</p>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
-              <div className="flex items-center justify-between text-slate-500">
-                <span className="text-xs font-semibold uppercase tracking-wider">Daily Streak</span>
-                <Flame className="h-4 w-4 text-amber-500" />
+            <div className="rounded-2xl cyber-card p-4 flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-mono text-slate-400 uppercase">Interview Score</p>
+                <p className="text-2xl font-black text-emerald-400 mt-0.5">{avgInterview}/100</p>
+                <p className="text-[10px] text-slate-400 mt-0.5 font-mono">Rubric benchmark</p>
               </div>
-              <div className="mt-2 flex items-baseline gap-2">
-                <span className="text-2xl font-black text-navy-900">{streakDays} Days</span>
-                <span className="text-xs font-semibold text-amber-600">Active</span>
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                <Award className="h-5 w-5" />
               </div>
-              <p className="mt-1 text-[11px] text-slate-400">Consistent daily study logged</p>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
-              <div className="flex items-center justify-between text-slate-500">
-                <span className="text-xs font-semibold uppercase tracking-wider">Avg Interview Score</span>
-                <Award className="h-4 w-4 text-purple-600" />
+            <div className="rounded-2xl cyber-card p-4 flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-mono text-slate-400 uppercase">AI Mentor</p>
+                <p className="text-base font-bold text-white mt-1">Live Grounded</p>
+                <p className="text-[10px] text-neon-purple mt-0.5 font-mono">Profile calibrated</p>
               </div>
-              <div className="mt-2 flex items-baseline gap-2">
-                <span className="text-2xl font-black text-navy-900">{avgInterview}</span>
-                <span className="text-xs font-semibold text-slate-500">/ 100</span>
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-neon-purple/10 text-neon-purple border border-neon-purple/20">
+                <Sparkles className="h-5 w-5" />
               </div>
-              <p className="mt-1 text-[11px] text-slate-400">Scored on 100-pt rubric</p>
             </div>
           </div>
 
-          {/* AI Trajectory Insights & Recommendation */}
-          {recommendations && (
-            <div className="rounded-2xl border border-brand-200 bg-brand-50/50 p-5">
-              <div className="flex items-center gap-2 mb-2">
-                <Sparkles className="h-4 w-4 text-brand-600" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-brand-900">
-                  AI Transition Advisor Strategy
-                </h3>
-              </div>
-              <p className="text-xs text-brand-900 font-medium leading-relaxed">
-                {recommendations.summary}
-              </p>
-              <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                <div className="rounded-xl bg-white p-3 border border-brand-100">
-                  <span className="font-semibold text-slate-700 block">High-Yield Practice:</span>
-                  <span className="text-slate-600 mt-0.5 block">{recommendations.recommendedPractice}</span>
-                </div>
-                <div className="rounded-xl bg-white p-3 border border-brand-100">
-                  <span className="font-semibold text-slate-700 block">Schedule Calibration:</span>
-                  <span className="text-slate-600 mt-0.5 block">{recommendations.revisedScheduleFocus}</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Core Modules Grid */}
+          {/* Module Navigation Cards */}
           <div>
             <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-lg font-bold text-navy-900">Core Career Transition Systems</h2>
-                <p className="text-xs text-slate-500">Click any module to execute targeted analysis and milestone workflows.</p>
-              </div>
+              <h2 className="text-base font-bold text-white">Your Integrated Career Modules</h2>
+              <span className="text-xs font-mono text-slate-400">8 Modules Connected</span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {modules.map((m, idx) => (
                 <Link
                   key={idx}
                   to={m.path}
-                  className="group rounded-2xl border border-slate-200 bg-white p-5 transition-all hover:border-brand-300 hover:shadow-md flex flex-col justify-between"
+                  className="rounded-2xl cyber-card p-5 flex flex-col justify-between hover:-translate-y-1 transition-all group"
                 >
                   <div>
                     <div className="flex items-center justify-between mb-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-700 group-hover:bg-brand-50 group-hover:text-brand-600 transition-colors">
-                        <m.icon className="h-5 w-5" />
+                      <div className={`flex h-9 w-9 items-center justify-center rounded-xl bg-cyber-bg border ${m.color}`}>
+                        <m.icon className="h-4 w-4" />
                       </div>
-                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-500">
-                        {m.badge}
-                      </span>
+                      <span className="text-[10px] font-mono text-slate-400 uppercase">{m.badge}</span>
                     </div>
-                    <h3 className="text-base font-bold text-navy-900 group-hover:text-brand-600 transition-colors">
+                    <h3 className="text-sm font-bold text-white group-hover:text-electric-400 transition-colors">
                       {m.title}
                     </h3>
-                    <p className="mt-1 text-xs text-slate-500 leading-relaxed">{m.desc}</p>
+                    <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                      {m.desc}
+                    </p>
                   </div>
-
-                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-brand-600 group-hover:text-brand-700">
-                    <span>Launch Module</span>
-                    <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  <div className="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between text-xs text-electric-400 font-mono">
+                    <span>Launch &rarr;</span>
+                    <ChevronRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
                   </div>
                 </Link>
               ))}
@@ -264,6 +255,8 @@ export const DashboardPage: React.FC = () => {
           </div>
         </main>
       </div>
+
+      <AICareerMentor />
     </div>
   );
 };

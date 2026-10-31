@@ -49,3 +49,35 @@ export async function callGeminiJson<T>(
     throw err;
   }
 }
+
+/**
+ * Execute a conversational prompt with Google Gemini and return text
+ */
+export async function callGeminiText(
+  prompt: string,
+  options: GeminiCallOptions = {}
+): Promise<{ text: string; isLiveAi: boolean }> {
+  const gemini = getGemini();
+
+  if (!isGeminiConfigured || !gemini) {
+    throw new Error('GEMINI_NOT_CONFIGURED');
+  }
+
+  const model = gemini.getGenerativeModel({
+    model: options.modelName || 'gemini-1.5-flash',
+    systemInstruction: options.systemInstruction || 'You are CareerPivot AI Mentor, a senior tech career coach. Provide clear, direct, and actionable guidance for career switchers and tech students.',
+    generationConfig: {
+      temperature: options.temperature ?? 0.4,
+      maxOutputTokens: options.maxOutputTokens ?? 2048,
+    },
+  });
+
+  try {
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    return { text: response.text().trim(), isLiveAi: true };
+  } catch (err: any) {
+    console.error('Gemini Text API call failed:', err.message || err);
+    throw err;
+  }
+}

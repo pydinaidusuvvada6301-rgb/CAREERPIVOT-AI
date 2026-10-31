@@ -4,17 +4,10 @@
 
 @layer base {
   :root {
-    --color-bg-primary: #f8fafc;
-    --color-card-bg: #ffffff;
-    --color-border: #e2e8f0;
-    --color-text-primary: #0f172a;
-    --color-text-secondary: #475569;
-  }
-
-  .dark {
-    --color-bg-primary: #0b1120;
-    --color-card-bg: #1e293b;
-    --color-border: #334155;
+    --color-bg-primary: #050814;
+    --color-surface: #0a1024;
+    --color-card-bg: rgba(12, 20, 44, 0.75);
+    --color-border: rgba(56, 189, 248, 0.2);
     --color-text-primary: #f8fafc;
     --color-text-secondary: #94a3b8;
   }
@@ -23,39 +16,67 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background-color: var(--color-bg-primary);
-  color: var(--color-text-primary);
+  background-color: #050814;
+  color: #f8fafc;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
+  background-image: 
+    radial-gradient(ellipse 80% 80% at 50% -20%, rgba(14, 165, 233, 0.15), rgba(255, 255, 255, 0)),
+    radial-gradient(circle at 10% 90%, rgba(139, 92, 246, 0.1), transparent 40%);
+  background-attachment: fixed;
 }
 
-/* Custom scrollbar */
+/* Custom Cyber Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
 }
 ::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: #050814;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #1e293b;
   border-radius: 4px;
+  border: 1px solid rgba(56, 189, 248, 0.2);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #0284c7;
 }
 
-/* Glassmorphism helpers */
-.glass-panel {
-  background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(226, 232, 240, 0.8);
+/* Futuristic Glassmorphism Panel */
+.cyber-card {
+  background: rgba(10, 16, 36, 0.72);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(56, 189, 248, 0.18);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.dark .glass-panel {
-  background: rgba(30, 41, 59, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(51, 65, 85, 0.8);
+.cyber-card:hover {
+  border-color: rgba(56, 189, 248, 0.45);
+  box-shadow: 0 12px 40px 0 rgba(0, 240, 255, 0.12);
+}
+
+.cyber-card-active {
+  background: rgba(14, 23, 52, 0.85);
+  border: 1px solid rgba(139, 92, 246, 0.5);
+  box-shadow: 0 0 25px rgba(139, 92, 246, 0.2);
+}
+
+/* Glowing Neon Text and Badges */
+.neon-glow-blue {
+  text-shadow: 0 0 12px rgba(56, 189, 248, 0.6);
+}
+
+.neon-glow-purple {
+  text-shadow: 0 0 12px rgba(168, 85, 247, 0.6);
+}
+
+/* Subtle Grid Background Pattern */
+.bg-cyber-grid {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(56, 189, 248, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(56, 189, 248, 0.04) 1px, transparent 1px);
 }
