@@ -13,10 +13,17 @@ import {
   AssessmentResult,
 } from '../types';
 
+const CANONICAL_BACKEND_URL = 'https://careerpivot-ai.onrender.com/api';
+let resolvedBaseUrl: string = '';
+
 function getApiBaseUrl(): string {
-  // If explicitly configured in environment, prioritize it
-  if (import.meta.env.VITE_API_BASE_URL) {
-    return import.meta.env.VITE_API_BASE_URL.replace(/\/+$/, '');
+  if (resolvedBaseUrl) return resolvedBaseUrl;
+
+  let url = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '');
+
+  // Self-healing: autocorrect outdated/typo backend hostname to live Render web service
+  if (url.includes('careerpivot-backend.onrender.com')) {
+    url = url.replace('careerpivot-backend.onrender.com', 'careerpivot-ai.onrender.com');
   }
 
   // If in browser on any non-localhost domain (Vercel, preview, custom domain):
@@ -25,11 +32,14 @@ function getApiBaseUrl(): string {
     window.location.hostname !== 'localhost' &&
     window.location.hostname !== '127.0.0.1'
   ) {
-    return 'https://careerpivot-ai.onrender.com/api';
+    if (!url || url.includes('localhost') || url.includes('127.0.0.1')) {
+      resolvedBaseUrl = CANONICAL_BACKEND_URL;
+      return CANONICAL_BACKEND_URL;
+    }
   }
 
-  // Local development fallback
-  return 'http://localhost:5000/api';
+  resolvedBaseUrl = url || 'http://localhost:5000/api';
+  return resolvedBaseUrl;
 }
 
 class ApiClient {
@@ -71,6 +81,22 @@ class ApiClient {
       clearTimeout(timeoutId);
 
       if (!response.ok) {
+        // If 404 or 502 on wrong backend host in production, attempt automatic failover
+        if (
+          (response.status === 404 || response.status === 502) &&
+          baseUrl !== CANONICAL_BACKEND_URL &&
+          typeof window !== 'undefined' &&
+          window.location.hostname !== 'localhost'
+        ) {
+          resolvedBaseUrl = CANONICAL_BACKEND_URL;
+          const fallbackUrl = `${CANONICAL_BACKEND_URL}${endpoint}`;
+          const retryRes = await fetch(fallbackUrl, {
+            ...options,
+            headers,
+          });
+          if (retryRes.ok) return retryRes.json();
+        }
+
         let errorMessage = `HTTP Error ${response.status}`;
         try {
           const errorData = await response.json();
@@ -84,6 +110,25 @@ class ApiClient {
       return response.json();
     } catch (err: any) {
       clearTimeout(timeoutId);
+
+      // Automatic fallback if initial network request failed (e.g. host not found, SSL error, 404)
+      if (
+        baseUrl !== CANONICAL_BACKEND_URL &&
+        typeof window !== 'undefined' &&
+        window.location.hostname !== 'localhost'
+      ) {
+        try {
+          resolvedBaseUrl = CANONICAL_BACKEND_URL;
+          const fallbackUrl = `${CANONICAL_BACKEND_URL}${endpoint}`;
+          const retryRes = await fetch(fallbackUrl, {
+            ...options,
+            headers,
+          });
+          if (retryRes.ok) return retryRes.json();
+        } catch {
+          // If failover also failed, continue to standard error formatting
+        }
+      }
 
       if (err.name === 'AbortError') {
         throw new Error(

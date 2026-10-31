@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: careerpivot-backend
+    name: careerpivot-ai
     runtime: node
     buildCommand: npm install && npm run build
     startCommand: npm start
