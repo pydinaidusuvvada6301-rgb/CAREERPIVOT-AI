@@ -20,14 +20,14 @@ Candidate Context:
 Structure:
 Provide exactly 4 weeks. For each week, outline:
 - Weekly objective
-- Key topics covered
-- 5 daily learning tasks (Monday-Friday pace suited to ${weeklyHours} hrs/week), each containing:
-  - dayNumber (1 to 5)
-  - title (Concise action-oriented title)
-  - description (What to learn)
-  - practicalExercise (Hands-on code or architecture exercise)
-  - deliverable (Tangible output such as a GitHub commit, diagram, or test file)
-  - resources (2 real documentation links with titles)
+- Key topics covered (2-3 topics)
+- 3 to 4 focused practical daily tasks (paced for ${weeklyHours} hrs/week), each containing:
+  - dayNumber (integer)
+  - title (Action-oriented title)
+  - description (What to learn concisely)
+  - practicalExercise (Hands-on coding or architecture exercise)
+  - deliverable (Tangible output, e.g. GitHub repo, SQL migration, Dockerfile)
+  - resources (1-2 real documentation links with titles)
   - assessmentQuestion (A specific technical question to verify understanding)
 
 Return JSON adhering strictly to:
@@ -59,7 +59,12 @@ Return JSON adhering strictly to:
 `;
 
   try {
-    const { data, isLiveAi } = await callGeminiJson<any>(prompt);
+    const { data, isLiveAi } = await callGeminiJson<any>(prompt, {
+      systemInstruction: 'You are a senior curriculum architect and engineering manager. Generate realistic, practical 4-week roadmaps tailored to the specified role and skill gaps with concrete coding deliverables.',
+      temperature: 0.2,
+      maxOutputTokens: 8192,
+      timeoutMs: 60000,
+    });
     const validated = roadmapOutputSchema.parse(data);
     return { data: validated, isLiveAi };
   } catch (err: any) {

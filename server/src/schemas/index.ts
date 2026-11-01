@@ -14,27 +14,28 @@ export const resumeParsedOutputSchema = z.object({
   education: z.array(
     z.object({
       degree: z.string(),
-      institution: z.string(),
-      year: z.string().optional(),
-      details: z.string().optional(),
+      institution: z.string().nullish(),
+      year: z.string().nullish(),
+      details: z.string().nullish(),
     })
   ).default([]),
   technicalSkills: z.array(z.string()).default([]),
   programmingLanguages: z.array(z.string()).default([]),
   frameworks: z.array(z.string()).default([]),
+  softSkills: z.array(z.string()).default([]),
   projects: z.array(
     z.object({
       name: z.string(),
       description: z.string(),
       technologies: z.array(z.string()).default([]),
-      link: z.string().optional(),
+      link: z.string().nullish(),
     })
   ).default([]),
   experience: z.array(
     z.object({
       role: z.string(),
-      company: z.string(),
-      duration: z.string().optional(),
+      company: z.string().nullish(),
+      duration: z.string().nullish(),
       responsibilities: z.array(z.string()).default([]),
     })
   ).default([]),
@@ -44,6 +45,25 @@ export const resumeParsedOutputSchema = z.object({
   skillsRequiringEvidence: z.array(z.string()).default([]),
   missingSections: z.array(z.string()).default([]),
   improvementSuggestions: z.array(z.string()).default([]),
+  overallScore: z.number().min(0).max(100).default(75),
+  atsScore: z.number().min(0).max(100).default(75),
+  scoreRubric: z.object({
+    keywordMatch: z.number().default(20),
+    quantifiedMetrics: z.number().default(18),
+    structureAndLayout: z.number().default(20),
+    roleAlignment: z.number().default(17),
+  }).default({ keywordMatch: 20, quantifiedMetrics: 18, structureAndLayout: 20, roleAlignment: 17 }),
+  missingKeywords: z.array(z.string()).default([]),
+  recommendedSkills: z.array(z.string()).default([]),
+  roleSuitability: z.string().default('Role alignment determined by evidence-based skill evaluation.'),
+  grammarFeedback: z.array(z.string()).default([]),
+  suggestedBullets: z.array(
+    z.object({
+      context: z.string(),
+      starRewrite: z.string(),
+      reason: z.string(),
+    })
+  ).default([]),
 });
 
 export type ResumeParsedOutput = z.infer<typeof resumeParsedOutputSchema>;
@@ -53,11 +73,21 @@ export type ResumeParsedOutput = z.infer<typeof resumeParsedOutputSchema>;
 // ==========================================
 export const skillDetailSchema = z.object({
   skill: z.string(),
-  importance: z.enum(['High', 'Medium', 'Low', 'Required', 'Preferred']).default('High'),
-  resumeEvidence: z.string(),
+  importance: z.preprocess((val) => {
+    if (typeof val === 'string') {
+      const lower = val.toLowerCase();
+      if (lower.includes('req')) return 'Required';
+      if (lower.includes('pref')) return 'Preferred';
+      if (lower.includes('med')) return 'Medium';
+      if (lower.includes('low')) return 'Low';
+      return 'High';
+    }
+    return 'High';
+  }, z.enum(['High', 'Medium', 'Low', 'Required', 'Preferred'])).default('High'),
+  resumeEvidence: z.string().default(''),
   proficiencyEstimated: z.string().default('Not assessed'),
   requiredProficiency: z.string().default('Intermediate'),
-  suggestedAction: z.string(),
+  suggestedAction: z.string().default(''),
 });
 
 export const skillGapRequestSchema = z.object({
@@ -153,7 +183,7 @@ export const portfolioProjectSchema = z.object({
 
 export const projectRecommendOutputSchema = z.object({
   targetRole: z.string(),
-  projects: z.array(portfolioProjectSchema).length(3),
+  projects: z.array(portfolioProjectSchema).min(1),
 });
 
 export type ProjectRecommendOutput = z.infer<typeof projectRecommendOutputSchema>;

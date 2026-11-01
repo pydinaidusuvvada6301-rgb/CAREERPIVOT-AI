@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  FileText,
   Upload,
   ArrowRight,
   CheckCircle2,
@@ -12,8 +11,6 @@ import {
   Download,
   Edit3,
   Check,
-  Percent,
-  Search,
   Copy,
   Columns,
   ArrowLeftRight,
@@ -100,12 +97,14 @@ export const ResumeAnalyzerPage: React.FC = () => {
             `Dedicated software developer pivoting into ${targetRole} with strong foundations in ${res.analysis.programmingLanguages.join(', ')}.`
         );
 
-        const initialBullets = [
-          `Architected responsive full-stack applications using ${res.analysis.frameworks.slice(0, 2).join(' and ') || 'React'}, achieving clean separation of concerns and high test coverage.`,
-          `Engineered RESTful APIs with strict schema validation, reducing unhandled request exceptions by 40%.`,
-          `Collaborated on Git workflows, performing peer code reviews and participating in agile sprint planning.`,
-        ];
-        setEditableBullets(initialBullets);
+        const liveBullets = res.analysis.suggestedBullets && res.analysis.suggestedBullets.length > 0
+          ? res.analysis.suggestedBullets.map((b: any) => b.starRewrite)
+          : [
+              `Architected responsive full-stack applications using ${res.analysis.frameworks.slice(0, 2).join(' and ') || 'React & Node.js'}, achieving clean separation of concerns and high test coverage.`,
+              `Engineered RESTful APIs with strict schema validation, reducing unhandled request exceptions by 40%.`,
+              `Collaborated on Git workflows, performing peer code reviews and participating in agile sprint planning.`,
+            ];
+        setEditableBullets(liveBullets);
 
         sessionStorage.setItem('careerpivot_resume_analysis', JSON.stringify(res.analysis));
       }
@@ -386,29 +385,44 @@ ${analysis.improvementSuggestions.map((s, i) => `${i + 1}. ${s}`).join('\n')}
                     <div className="lg:col-span-4 rounded-3xl cyber-card p-6 flex flex-col justify-between">
                       <div>
                         <span className="text-[10px] font-mono uppercase tracking-widest text-electric-400">
-                          ATS Engine Alignment
+                          ATS Engine Alignment (Rubric Scored)
                         </span>
                         <div className="mt-3 flex items-baseline gap-2">
-                          <span className="text-4xl font-black text-electric-400">84%</span>
-                          <span className="text-xs font-mono text-emerald-400">Strong Parsing Score</span>
+                          <span className="text-4xl font-black text-electric-400">
+                            {analysis.atsScore ?? analysis.overallScore ?? 75}%
+                          </span>
+                          <span className={`text-xs font-mono ${(analysis.atsScore ?? 75) >= 70 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                            {(analysis.atsScore ?? 75) >= 70 ? 'Strong ATS Alignment' : 'Needs Optimization'}
+                          </span>
                         </div>
                         <p className="text-xs text-slate-400 mt-2 leading-relaxed">
-                          Estimated match for standard technical Applicant Tracking Systems based on structure, keyword density, and verifiable metrics.
+                          Explainable 100-point rubric assessing keyword density, measurable metrics, layout readability, and role suitability.
                         </p>
+
+                        {analysis.roleSuitability && (
+                          <div className="mt-3 p-2.5 rounded-xl bg-electric-500/10 border border-electric-500/20 text-[11px] text-electric-300 leading-snug">
+                            <span className="font-bold text-white block mb-0.5">Role Alignment Verdict:</span>
+                            {analysis.roleSuitability}
+                          </div>
+                        )}
                       </div>
 
                       <div className="space-y-2 pt-4 border-t border-slate-800 text-[11px] font-mono">
                         <div className="flex justify-between text-slate-300">
                           <span>Keyword Density:</span>
-                          <span className="text-emerald-400">High</span>
+                          <span className="text-emerald-400 font-bold">{analysis.scoreRubric?.keywordMatch ?? 18} / 25</span>
                         </div>
                         <div className="flex justify-between text-slate-300">
                           <span>Measurable Metrics:</span>
-                          <span className="text-amber-400">Moderate (Add %/numbers)</span>
+                          <span className="text-amber-400 font-bold">{analysis.scoreRubric?.quantifiedMetrics ?? 16} / 25</span>
                         </div>
                         <div className="flex justify-between text-slate-300">
                           <span>Layout Readability:</span>
-                          <span className="text-emerald-400">Optimal (Clean text)</span>
+                          <span className="text-emerald-400 font-bold">{analysis.scoreRubric?.structureAndLayout ?? 20} / 25</span>
+                        </div>
+                        <div className="flex justify-between text-slate-300">
+                          <span>Target Role Alignment:</span>
+                          <span className="text-electric-400 font-bold">{analysis.scoreRubric?.roleAlignment ?? 16} / 25</span>
                         </div>
                       </div>
                     </div>
@@ -481,6 +495,55 @@ ${analysis.improvementSuggestions.map((s, i) => `${i + 1}. ${s}`).join('\n')}
                       </div>
                     </div>
                   </div>
+
+                  {/* Missing Keywords & Recommended Skills */}
+                  {((analysis.missingKeywords && analysis.missingKeywords.length > 0) || (analysis.recommendedSkills && analysis.recommendedSkills.length > 0)) && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {analysis.missingKeywords && analysis.missingKeywords.length > 0 && (
+                        <div className="rounded-3xl cyber-card p-6 border-rose-500/30">
+                          <div className="flex items-center gap-2 mb-3">
+                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-500/20 text-rose-400 font-mono font-bold text-xs">!</span>
+                            <h3 className="text-sm font-bold text-white">Missing ATS Keywords</h3>
+                          </div>
+                          <p className="text-xs text-slate-400 mb-3">
+                            Expected in screening for <strong>{targetRole}</strong> but missing from your resume:
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {analysis.missingKeywords.map((kw, idx) => (
+                              <span
+                                key={idx}
+                                className="rounded-lg bg-rose-500/10 px-2.5 py-1 text-xs font-mono font-semibold text-rose-300 border border-rose-500/30"
+                              >
+                                + {kw}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {analysis.recommendedSkills && analysis.recommendedSkills.length > 0 && (
+                        <div className="rounded-3xl cyber-card p-6 border-electric-500/30">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Sparkles className="h-4 w-4 text-electric-400" />
+                            <h3 className="text-sm font-bold text-white">Recommended Target Skills</h3>
+                          </div>
+                          <p className="text-xs text-slate-400 mb-3">
+                            High-demand competencies to accelerate your transition:
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {analysis.recommendedSkills.map((sk, idx) => (
+                              <span
+                                key={idx}
+                                className="rounded-lg bg-electric-500/10 px-2.5 py-1 text-xs font-mono font-semibold text-electric-300 border border-electric-500/30"
+                              >
+                                {sk}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Optimization Suggestions */}
                   <div className="rounded-3xl cyber-card p-6">
@@ -571,6 +634,30 @@ ${analysis.improvementSuggestions.map((s, i) => `${i + 1}. ${s}`).join('\n')}
                       </div>
                     ))}
                   </div>
+
+                  {analysis.suggestedBullets && analysis.suggestedBullets.length > 0 && (
+                    <div className="pt-4 border-t border-slate-800 space-y-2.5">
+                      <span className="text-xs font-mono text-electric-400 block font-bold">
+                        Detailed STAR Transformation & Strategic Rationale:
+                      </span>
+                      {analysis.suggestedBullets.map((item, i) => (
+                        <div key={i} className="p-3 rounded-2xl bg-cyber-bg border border-slate-800 text-xs space-y-1">
+                          <div className="text-[11px] text-slate-400">
+                            <span className="font-mono text-rose-400 font-bold">Original: </span>
+                            <span className="italic">{item.context}</span>
+                          </div>
+                          <div className="text-[11px] text-emerald-300">
+                            <span className="font-mono text-emerald-400 font-bold">STAR Rewrite: </span>
+                            {item.starRewrite}
+                          </div>
+                          <div className="text-[10px] text-slate-400 italic">
+                            <span className="font-mono text-electric-400">ATS Rationale: </span>
+                            {item.reason}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -590,11 +677,11 @@ ${analysis.improvementSuggestions.map((s, i) => `${i + 1}. ${s}`).join('\n')}
                       </div>
                       <div className="flex items-center gap-2 text-xs font-mono">
                         <span className="px-2.5 py-1 rounded-lg bg-rose-500/20 text-rose-400 border border-rose-500/30">
-                          Original ATS: 52%
+                          Baseline Score: {analysis.atsScore ?? 65}%
                         </span>
                         <span className="text-slate-500">→</span>
                         <span className="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold">
-                          Optimized ATS: 84%
+                          Optimized Benchmark: {Math.min(96, (analysis.atsScore ?? 65) + 20)}%
                         </span>
                       </div>
                     </div>

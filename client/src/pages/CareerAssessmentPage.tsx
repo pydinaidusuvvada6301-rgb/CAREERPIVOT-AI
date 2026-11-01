@@ -407,6 +407,20 @@ export const CareerAssessmentPage: React.FC = () => {
                           </div>
                         </div>
 
+                        {/* Progression & Difficulty Badges */}
+                        <div className="flex flex-wrap items-center gap-2 pt-2">
+                          {rec.beginnerSuitability && (
+                            <span className="rounded-lg bg-electric-500/10 border border-electric-500/30 px-2 py-0.5 text-[10px] font-mono text-electric-300">
+                              Suitability: {rec.beginnerSuitability}
+                            </span>
+                          )}
+                          {rec.difficultyToPivot && (
+                            <span className="rounded-lg bg-indigo-500/10 border border-indigo-500/30 px-2 py-0.5 text-[10px] font-mono text-indigo-300">
+                              Difficulty: {rec.difficultyToPivot}
+                            </span>
+                          )}
+                        </div>
+
                         {/* First Recommended Project Blueprint */}
                         <div className="rounded-2xl border border-electric-500/20 bg-cyber-bg/80 p-3.5 space-y-1">
                           <span className="text-[10px] font-mono uppercase tracking-widest text-electric-400 block">
@@ -417,6 +431,29 @@ export const CareerAssessmentPage: React.FC = () => {
                             {rec.recommendedFirstProject.description}
                           </p>
                         </div>
+
+                        {/* Career Progression & Next Action Callout */}
+                        {(rec.potentialCareerProgression || rec.suggestedNextAction) && (
+                          <div className="space-y-2 pt-2 border-t border-slate-800 text-xs">
+                            {rec.potentialCareerProgression && (
+                              <div className="flex items-center gap-1.5 text-slate-300">
+                                <span className="text-[10px] font-mono uppercase text-slate-500 font-bold shrink-0">Progression:</span>
+                                <span className="font-mono text-[11px] text-cyan-300">
+                                  {Array.isArray(rec.potentialCareerProgression)
+                                    ? rec.potentialCareerProgression.join(' → ')
+                                    : rec.potentialCareerProgression}
+                                </span>
+                              </div>
+                            )}
+
+                            {rec.suggestedNextAction && (
+                              <div className="p-2.5 rounded-xl bg-cyber-surface border border-slate-800 text-[11px] text-slate-300 leading-relaxed">
+                                <strong className="text-emerald-400 font-mono">Suggested Next Action: </strong>
+                                {rec.suggestedNextAction}
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
 
                       {/* Action buttons */}

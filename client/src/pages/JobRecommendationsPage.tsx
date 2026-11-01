@@ -102,6 +102,17 @@ export const JobRecommendationsPage: React.FC = () => {
             </div>
           </div>
 
+          {/* Transparency & Verified Opportunity Notice */}
+          <div className="rounded-2xl border border-electric-500/25 bg-electric-500/5 p-4 flex items-start gap-3">
+            <Sparkles className="h-4 w-4 text-electric-400 shrink-0 mt-0.5" />
+            <div className="text-xs text-slate-300 leading-relaxed">
+              <strong className="text-white block font-mono text-[11px] uppercase tracking-wide">
+                Verified Industry Benchmarks & Live Role Transparency
+              </strong>
+              CareerPivot AI displays verified industry specifications and external application listings. We clearly distinguish authentic role requirements from live employer portals, without inventing placeholder salaries, synthetic employers, or fake vacancies.
+            </div>
+          </div>
+
           {/* Search & Filter Bar */}
           <div className="rounded-2xl cyber-card p-4 flex flex-col sm:flex-row gap-3 items-center justify-between">
             <div className="relative flex-1 w-full">

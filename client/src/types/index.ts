@@ -35,6 +35,19 @@ export interface ResumeExperience {
   responsibilities: string[];
 }
 
+export interface ResumeScoreRubric {
+  keywordMatch: number;
+  quantifiedMetrics: number;
+  structureAndLayout: number;
+  roleAlignment: number;
+}
+
+export interface SuggestedBullet {
+  context: string;
+  starRewrite: string;
+  reason: string;
+}
+
 export interface ResumeParsedData {
   name?: string | null;
   summary: string;
@@ -42,6 +55,7 @@ export interface ResumeParsedData {
   technicalSkills: string[];
   programmingLanguages: string[];
   frameworks: string[];
+  softSkills?: string[];
   projects: ResumeProject[];
   experience: ResumeExperience[];
   certifications: string[];
@@ -50,6 +64,14 @@ export interface ResumeParsedData {
   skillsRequiringEvidence: string[];
   missingSections: string[];
   improvementSuggestions: string[];
+  overallScore?: number;
+  atsScore?: number;
+  scoreRubric?: ResumeScoreRubric;
+  missingKeywords?: string[];
+  recommendedSkills?: string[];
+  roleSuitability?: string;
+  grammarFeedback?: string[];
+  suggestedBullets?: SuggestedBullet[];
 }
 
 export interface SkillDetail {
@@ -216,6 +238,8 @@ export interface CareerAssessmentInput {
   careerGoal: string;
   preferredEnvironment: 'Remote' | 'Hybrid' | 'On-site' | 'Flexible';
   learningPreferences: string[];
+  preferredLocation?: string;
+  salaryExpectations?: string;
 }
 
 export interface CareerRecommendation {
@@ -227,8 +251,11 @@ export interface CareerRecommendation {
   requiredSoftSkills: string[];
   userStrengths: string[];
   missingSkills: string[];
-  difficultyToPivot: 'Beginner Friendly' | 'Moderate Sprint' | 'Intensive Focus';
+  difficultyToPivot: 'Beginner Friendly' | 'Moderate Sprint' | 'Intensive Focus' | 'Beginner' | 'Intermediate' | 'Advanced' | string;
   estimatedTimeToReady: string;
+  beginnerSuitability?: 'High' | 'Moderate' | 'Prerequisites Required' | string;
+  potentialCareerProgression?: string | string[];
+  suggestedNextAction?: string;
   recommendedFirstProject: {
     title: string;
     description: string;
